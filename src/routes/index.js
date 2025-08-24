@@ -1,6 +1,7 @@
 // src/routes/index.js
 const express = require('express');
 const clientRoutes = require('./clientRoutes');
+const staffRoutes = require('./staffRoutes');
 
 const router = express.Router();
 
@@ -16,6 +17,7 @@ router.get('/health', (req, res) => {
 
 // API routes
 router.use('/clients', clientRoutes);
+router.use('/staffs', staffRoutes);
 
 // API info endpoint
 router.get('/', (req, res) => {
@@ -26,7 +28,12 @@ router.get('/', (req, res) => {
       health: 'GET /api/v1/health',
       clients: {
         list: 'GET /api/v1/clients',
-        details: 'GET /api/v1/clients/:id'
+        details: 'GET /api/v1/clients/:id',
+        statistics: 'GET /api/v1/clients/:id/statistics'
+      },
+      staffs: {
+        by_client: 'GET /api/v1/staffs/client/:clientId',
+        by_staff_id: 'GET /api/v1/staffs/:staffId'
       }
     }
   });
