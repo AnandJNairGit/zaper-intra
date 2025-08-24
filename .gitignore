@@ -1,0 +1,245 @@
+# ===================================
+# Node.js Dependencies
+# ===================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# ===================================
+# Environment Variables & Config
+# ===================================
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.staging
+
+# Database configuration files (if they contain sensitive data)
+config/database.json
+config/config.json
+src/config/database.js
+database.json
+
+# ===================================
+# Logs
+# ===================================
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# ===================================
+# Runtime & Temporary Files
+# ===================================
+lib-cov/
+coverage/
+nyc_output/
+.grunt/
+bower_components/
+.lock-wscript/
+build/Release/
+.npm/
+.eslintcache
+.stylelintcache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+# ===================================
+# PostgreSQL & Database Files
+# ===================================
+# PostgreSQL data directory (if running locally)
+postgres-data/
+pgdata/
+*.sql.backup
+*.dump
+*.backup
+
+# Database connection test files
+test-db-connection.js
+db-test.js
+
+# ===================================
+# Sequelize Specific
+# ===================================
+# Don't ignore models, migrations, seeders folders - keep them
+# But ignore any backup or temporary files in them
+/database/backups/
+/src/database/backups/
+*.sql
+
+# ===================================
+# Express & Node.js Runtime
+# ===================================
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# parcel-bundler cache (https://parceljs.org/)
+.cache
+.parcel-cache
+
+# ===================================
+# IDE & Editor Files
+# ===================================
+# Visual Studio Code
+.vscode/
+.vscode/settings.json
+.vscode/tasks.json
+.vscode/launch.json
+.vscode/extensions.json
+*.code-workspace
+
+# WebStorm/IntelliJ
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+
+# ===================================
+# OS Generated Files
+# ===================================
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Icon?
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Linux
+*~
+.nfs*
+
+# ===================================
+# Testing & Coverage
+# ===================================
+coverage/
+*.lcov
+.nyc_output
+.coverage/
+junit.xml
+test-results.xml
+
+# ===================================
+# Build & Distribution
+# ===================================
+dist/
+build/
+out/
+.next/
+.nuxt/
+.vuepress/dist/
+
+# ===================================
+# Package Managers
+# ===================================
+# Yarn
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
+
+# NPM
+package-lock.json  # Optional: remove if you want to commit lock file
+.npm/
+
+# PNPM
+.pnpm-debug.log*
+.pnpm-store/
+
+# ===================================
+# Security & Certificates
+# ===================================
+*.pem
+*.key
+*.crt
+*.cert
+*.p12
+*.pfx
+
+# ===================================
+# Docker (if using)
+# ===================================
+docker-compose.override.yml
+.dockerignore
+
+# ===================================
+# Miscellaneous
+# ===================================
+# Backup files
+*.bak
+*.backup
+*.tmp
+*.temp
+
+# Archive files
+*.zip
+*.tar
+*.tar.gz
+*.rar
+
+# Documentation build
+/docs/build/
+
+# Local development files
+/local/
+/tmp/
+/temp/
+scratch.js
+test.js
+playground.js
