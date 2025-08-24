@@ -4,21 +4,29 @@ const clientController = require('../controllers/clientController');
 
 const router = express.Router();
 
+// Debug: Check if controller methods exist
+console.log('ClientController methods:', Object.getOwnPropertyNames(clientController));
+console.log('getAllClientsSummary type:', typeof clientController.getAllClientsSummary);
+console.log('getClientSummaryById type:', typeof clientController.getClientSummaryById);
+console.log('getClientStatistics type:', typeof clientController.getClientStatistics);
+
 /**
  * @route   GET /api/v1/clients
  * @desc    Get all clients summary (lightweight)
- * @access  Public (internal use)
- * @query   page, limit, search, status
- * @returns JSON with client_id, client_name, registered_date, total_staff_count, total_projects_count
  */
 router.get('/', clientController.getAllClientsSummary);
 
 /**
+ * @route   GET /api/v1/clients/:id/statistics  
+ * @desc    Get comprehensive statistics for a specific client
+ * @param   id - Client ID
+ */
+router.get('/:id/statistics', clientController.getClientStatistics);
+
+/**
  * @route   GET /api/v1/clients/:id
  * @desc    Get client summary by ID (lightweight)
- * @access  Public (internal use)
  * @param   id - Client ID
- * @returns JSON with client summary
  */
 router.get('/:id', clientController.getClientSummaryById);
 

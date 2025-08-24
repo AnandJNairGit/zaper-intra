@@ -3,24 +3,23 @@ const logger = require('../utils/logger');
 const { errorResponse } = require('../utils/response');
 
 /**
- * Global error handling middleware
- * @param {Error} err - Error object
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- * @param {Function} next - Express next function
+ * Global error handling middleware with enhanced logging
  */
 const errorHandler = (err, req, res, next) => {
-  // Log the error
-  logger.error('Unhandled error:', {
+  // Enhanced error logging with context
+  logger.error('Unhandled error occurred:', {
     error: err.message,
     stack: err.stack,
     url: req.url,
     method: req.method,
+    params: req.params,
+    query: req.query,
     ip: req.ip,
-    userAgent: req.get('User-Agent')
+    userAgent: req.get('User-Agent'),
+    timestamp: new Date().toISOString()
   });
 
-  // Sequelize validation error
+  // Sequelize specific errors
   if (err.name === 'SequelizeValidationError') {
     const errors = err.errors.map(e => ({
       field: e.path,
@@ -30,17 +29,24 @@ const errorHandler = (err, req, res, next) => {
     return errorResponse(res, 'Validation error', 400, errors);
   }
 
-  // Sequelize database error
   if (err.name === 'SequelizeDatabaseError') {
     const message = process.env.NODE_ENV === 'production' 
-      ? 'Database error occurred' 
+      ? 'Database operation failed' 
       : err.message;
     return errorResponse(res, message, 500);
   }
 
-  // Sequelize connection error
   if (err.name === 'SequelizeConnectionError') {
     return errorResponse(res, 'Database connection error', 503);
+  }
+
+  // Custom application errors
+  if (err.message.includes('Client not found')) {
+    return errorResponse(res, 'Client not found', 404);
+  }
+
+  if (err.message.includes('Invalid client ID')) {
+    return errorResponse(res, 'Invalid client ID provided', 400);
   }
 
   // Default error response

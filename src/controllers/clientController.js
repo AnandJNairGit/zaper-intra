@@ -7,7 +7,6 @@ class ClientController {
   /**
    * Get all clients summary (lightweight)
    * GET /api/v1/clients
-   * Query params: page, limit, search, status
    */
   async getAllClientsSummary(req, res) {
     try {
@@ -60,7 +59,6 @@ class ClientController {
     try {
       const { id } = req.params;
       
-      // Validate ID parameter
       if (!id || isNaN(id)) {
         return errorResponse(res, 'Invalid client ID', 400);
       }
@@ -90,6 +88,51 @@ class ClientController {
       );
     }
   }
+
+  /**
+   * Get comprehensive statistics for a specific client
+   * GET /api/v1/clients/:id/statistics
+   */
+  async getClientStatistics(req, res) {
+    try {
+      const { id } = req.params;
+      
+      if (!id || isNaN(id)) {
+        return errorResponse(res, 'Invalid client ID. Must be a valid number.', 400);
+      }
+
+      const clientId = parseInt(id);
+      const statistics = await clientService.getClientStatistics(clientId);
+      
+      logger.info(`Retrieved statistics for client ID: ${clientId}`);
+      
+      return successResponse(
+        res,
+        'Client statistics retrieved successfully',
+        { statistics },
+        200
+      );
+
+    } catch (error) {
+      logger.error(`Error in getClientStatistics for ID ${req.params.id}:`, error);
+
+      if (error.message.includes('Client not found')) {
+        return errorResponse(res, 'Client not found', 404);
+      }
+
+      if (error.message.includes('Invalid client ID')) {
+        return errorResponse(res, 'Invalid client ID provided', 400);
+      }
+
+      return errorResponse(
+        res,
+        'Failed to retrieve client statistics',
+        500,
+        process.env.NODE_ENV === 'development' ? error.message : null
+      );
+    }
+  }
 }
 
+// ✅ IMPORTANT: Export a new instance of the class
 module.exports = new ClientController();
