@@ -1,12 +1,16 @@
+// src/models/associations.js
 module.exports = (db) => {
   const { 
     Client, 
     ClientProject, 
     ClientUser, 
     ClientRole,
+    ClientJobProfile,
     User, 
     UserPhoto, 
-    UserSalary 
+    UserSalary,
+    UserJobProfile,
+    UserNotificationToken
   } = db;
 
   // Client associations
@@ -25,6 +29,24 @@ module.exports = (db) => {
   Client.hasMany(ClientRole, { 
     foreignKey: 'client_id', 
     as: 'clientRoles',
+    onDelete: 'CASCADE'
+  });
+
+  Client.hasMany(ClientJobProfile, { 
+    foreignKey: 'client_id', 
+    as: 'clientJobProfiles',
+    onDelete: 'CASCADE'
+  });
+
+  // ClientJobProfile associations
+  ClientJobProfile.belongsTo(Client, { 
+    foreignKey: 'client_id', 
+    as: 'client' 
+  });
+
+  ClientJobProfile.hasMany(UserJobProfile, { 
+    foreignKey: 'profile_id', 
+    as: 'userJobProfiles',
     onDelete: 'CASCADE'
   });
 
@@ -85,6 +107,45 @@ module.exports = (db) => {
     onDelete: 'CASCADE'
   });
 
+  User.hasMany(UserJobProfile, { 
+    foreignKey: 'user_id', 
+    as: 'jobProfiles',
+    onDelete: 'CASCADE'
+  });
+
+  User.hasMany(UserNotificationToken, { 
+    foreignKey: 'user_id', 
+    as: 'notificationTokens',
+    onDelete: 'CASCADE'
+  });
+
+  // UserJobProfile associations
+  UserJobProfile.belongsTo(User, { 
+    foreignKey: 'user_id', 
+    as: 'user' 
+  });
+
+  UserJobProfile.belongsTo(ClientJobProfile, { 
+    foreignKey: 'profile_id', 
+    as: 'jobProfile' 
+  });
+
+  UserJobProfile.belongsTo(User, { 
+    foreignKey: 'created_by', 
+    as: 'creator' 
+  });
+
+  UserJobProfile.belongsTo(User, { 
+    foreignKey: 'updated_by', 
+    as: 'updater' 
+  });
+
+  // UserNotificationToken associations
+  UserNotificationToken.belongsTo(User, { 
+    foreignKey: 'user_id', 
+    as: 'user' 
+  });
+
   // UserPhoto associations
   UserPhoto.belongsTo(User, { 
     foreignKey: 'user_id', 
@@ -117,7 +178,7 @@ module.exports = (db) => {
     as: 'updater' 
   });
 
-  // ClientProject associations (from before)
+  // ClientProject associations (existing)
   ClientProject.belongsTo(Client, { 
     foreignKey: 'client_id', 
     as: 'client' 
