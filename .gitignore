@@ -63,7 +63,7 @@ postgres-data/
 pgdata/
 *.sql.backup
 *.dump
-*.backup
+# *.backup
 
 # Database connection test files
 test-db-connection.js
@@ -223,7 +223,6 @@ docker-compose.override.yml
 # ===================================
 # Backup files
 *.bak
-*.backup
 *.tmp
 *.temp
 
