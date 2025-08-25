@@ -1,71 +1,116 @@
 // src/pages/Clients/ClientsPage.jsx
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Users, Building2, TrendingUp } from 'lucide-react';
+import useClients from '../../hooks/useClients';
+import { Table } from '../../components/ui/Table';
 
 const ClientsPage = () => {
-  const [clients, setClients] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({
-    total: 0,
-    active: 0,
-    totalStaff: 0
-  });
+  const navigate = useNavigate();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageLimit] = useState(50);
 
-  // Simulate API call - Replace with actual API call later
-  useEffect(() => {
-    const fetchClients = async () => {
-      try {
-        // Simulated delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Simulated data - Replace with actual API call
-        const mockClients = [
-          {
-            client_id: 1,
-            client_name: "Tech Solutions Ltd",
-            registered_date: "2025-01-15T00:00:00.000Z",
-            total_staff_count: 25,
-            total_projects_count: 5
-          },
-          {
-            client_id: 2,
-            client_name: "Digital Innovations Inc",
-            registered_date: "2025-02-20T00:00:00.000Z",
-            total_staff_count: 42,
-            total_projects_count: 8
-          },
-          {
-            client_id: 3,
-            client_name: "Global Services Corp",
-            registered_date: "2025-03-10T00:00:00.000Z",
-            total_staff_count: 18,
-            total_projects_count: 3
-          }
-        ];
-        
-        setClients(mockClients);
-        setStats({
-          total: mockClients.length,
-          active: mockClients.length,
-          totalStaff: mockClients.reduce((sum, client) => sum + client.total_staff_count, 0)
-        });
-        setLoading(false);
-      } catch (error) {
-        console.error('Error fetching clients:', error);
-        setLoading(false);
-      }
+  const queryParams = useMemo(() => ({
+    page: currentPage,
+    limit: pageLimit,
+    ...(searchTerm && { search: searchTerm })
+  }), [currentPage, pageLimit, searchTerm]);
+
+  const { clients, pagination, summary, loading, error, refetch } = useClients(queryParams);
+
+  // Calculate stats from the actual data
+  const stats = useMemo(() => {
+    if (!clients.length && !summary) return { total: 0, active: 0, totalStaff: 0 };
+    
+    return {
+      total: summary?.total_clients || pagination?.total || 0,
+      active: clients.length,
+      totalStaff: clients.reduce((sum, client) => sum + (client.total_staff_count || 0), 0)
     };
+  }, [clients, summary, pagination]);
 
-    fetchClients();
-  }, []);
+  // Handle row click - navigate to client details
+  const handleRowClick = (client) => {
+    navigate(`/clients/${client.client_id}`);
+  };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-      </div>
-    );
-  }
+  // Define table columns
+  const columns = [
+    {
+      key: 'client_name',
+      title: 'Client Name',
+      sortable: true,
+      render: (value, item) => (
+        <div>
+          <div className="text-sm font-medium text-gray-900">{value}</div>
+          <div className="text-sm text-gray-500">ID: {item.client_id}</div>
+        </div>
+      )
+    },
+    {
+      key: 'registered_date',
+      title: 'Registered Date',
+      type: 'date',
+      sortable: true,
+      width: '150px'
+    },
+    {
+      key: 'total_staff_count',
+      title: 'Staff Count',
+      type: 'number',
+      sortable: true,
+      width: '120px',
+      className: 'text-center'
+    },
+    {
+      key: 'total_projects_count',
+      title: 'Projects',
+      type: 'number',
+      sortable: true,
+      width: '100px',
+      className: 'text-center'
+    },
+    {
+      key: 'status',
+      title: 'Status',
+      width: '100px',
+      render: () => (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+          Active
+        </span>
+      )
+    }
+  ];
+
+  const handleSearch = (searchValue) => {
+    setSearchTerm(searchValue);
+    setCurrentPage(1);
+    refetch({
+      page: 1,
+      limit: pageLimit,
+      ...(searchValue && { search: searchValue })
+    });
+  };
+
+  const handlePageChange = (newPage) => {
+    setCurrentPage(newPage);
+    refetch({
+      ...queryParams,
+      page: newPage
+    });
+  };
+
+  // Custom empty state
+  const emptyState = (
+    <div className="text-center py-12">
+      <Users className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+      <p className="text-lg font-medium text-gray-900">No clients found</p>
+      <p className="text-sm text-gray-500 mt-1">
+        {searchTerm ? 'Try adjusting your search terms' : 'Start by adding your first client'}
+      </p>
+    </div>
+  );
 
   return (
     <div className="space-y-6 bg-white">
@@ -117,63 +162,23 @@ const ClientsPage = () => {
       </div>
 
       {/* Clients Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200 bg-white">
-          <h2 className="text-lg font-semibold text-gray-900">Client Directory</h2>
-        </div>
-        
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Client Name
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Registered Date
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Staff Count
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Projects
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {clients.map((client) => (
-                <tr key={client.client_id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">
-                      {client.client_name}
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      ID: {client.client_id}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {new Date(client.registered_date).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {client.total_staff_count}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {client.total_projects_count}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                      Active
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <Table
+        data={clients.map(client => ({ ...client, id: client.client_id }))}
+        columns={columns}
+        loading={loading}
+        error={error}
+        pagination={pagination}
+        onPageChange={handlePageChange}
+        onSearch={handleSearch}
+        searchValue={searchTerm}
+        searchPlaceholder="Search clients by name or client number..."
+        emptyState={emptyState}
+        rowClickable={true}
+        onRowClick={handleRowClick}
+        sortable={false}
+        showSearch={true}
+        showPagination={true}
+      />
     </div>
   );
 };

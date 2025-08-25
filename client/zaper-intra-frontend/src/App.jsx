@@ -2,6 +2,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/layout/Layout';
 import ClientsPage from './pages/Clients/ClientsPage';
+import ClientDetailsPage from './pages/Clients/ClientDetailsPage';
 import './App.css';
 
 function App() {
@@ -13,8 +14,9 @@ function App() {
             {/* Default route - redirect to clients */}
             <Route path="/" element={<Navigate to="/clients" replace />} />
             
-            {/* Clients route */}
+            {/* Clients routes */}
             <Route path="/clients" element={<ClientsPage />} />
+            <Route path="/clients/:clientId" element={<ClientDetailsPage />} />
             
             {/* Add more routes here as needed */}
           </Routes>
