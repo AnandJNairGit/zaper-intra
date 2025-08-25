@@ -20,7 +20,7 @@ lerna-debug.log*
 # Database configuration files (if they contain sensitive data)
 config/database.json
 config/config.json
-src/config/database.js
+# src/config/database.js
 database.json
 
 # ===================================
