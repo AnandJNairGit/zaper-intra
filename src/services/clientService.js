@@ -134,6 +134,7 @@ class ClientService {
 
   /**
    * Get comprehensive statistics for a specific client
+   * FIXED: Improved OT logic to check both ClientRole and UserSalary for overtime settings
    */
   async getClientStatistics(clientId) {
     if (!clientId || isNaN(clientId)) {
@@ -152,6 +153,7 @@ class ClientService {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
+      // FIXED: Enhanced SQL query with improved OT logic
       const [statisticsResult] = await Client.sequelize.query(`
         WITH client_stats AS (
           SELECT 
@@ -161,8 +163,24 @@ class ClientService {
             COUNT(DISTINCT cu.staff_id) AS total_staff,
             COUNT(DISTINCT CASE WHEN up.photo_id IS NOT NULL THEN cu.staff_id END) AS staff_with_registered_face,
             COUNT(DISTINCT CASE WHEN up.photo_id IS NULL THEN cu.staff_id END) AS staff_without_registered_face,
-            COUNT(DISTINCT CASE WHEN cr.use_overtime = true AND up.photo_id IS NOT NULL THEN cu.staff_id END) AS overtime_enabled_staff_with_face,
-            COUNT(DISTINCT CASE WHEN cr.use_overtime = true AND up.photo_id IS NULL THEN cu.staff_id END) AS overtime_enabled_staff_without_face,
+            
+            -- FIXED: Enhanced OT logic - checks both ClientRole.use_overtime AND UserSalary.use_overtime
+            COUNT(DISTINCT CASE 
+              WHEN (
+                (cr.use_overtime = true) OR 
+                (us.use_overtime = true)
+              ) AND up.photo_id IS NOT NULL 
+              THEN cu.staff_id 
+            END) AS overtime_enabled_staff_with_face,
+            
+            COUNT(DISTINCT CASE 
+              WHEN (
+                (cr.use_overtime = true) OR 
+                (us.use_overtime = true)
+              ) AND up.photo_id IS NULL 
+              THEN cu.staff_id 
+            END) AS overtime_enabled_staff_without_face,
+            
             COUNT(DISTINCT CASE WHEN cu.joining_date >= :thirtyDaysAgo THEN cu.staff_id END) AS staff_onboarded_last_30_days,
             COUNT(DISTINCT CASE WHEN cu.current_active = true THEN cu.staff_id END) AS active_staff,
             COUNT(DISTINCT CASE WHEN (cu.current_active IS NULL OR cu.current_active = false) THEN cu.staff_id END) AS inactive_staff,
@@ -173,6 +191,8 @@ class ClientService {
           LEFT JOIN client_projects cp ON cp.client_id = c.client_id
           LEFT JOIN client_roles cr ON cr.role_id = cu.role_id
           LEFT JOIN user_photos up ON up.user_id = cu.user_id
+          -- FIXED: Added LEFT JOIN to user_salary to check for overtime settings there too
+          LEFT JOIN user_salary us ON us.user_id = cu.user_id
           WHERE c.client_id = :clientId
           GROUP BY c.client_id, c.client_name
         )

@@ -26,7 +26,7 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
     },
     {
       id: 'analytics',
-      label: 'Analytics',
+      label: 'Projects',
       icon: BarChart3,
       path: '/analytics',
       active: location.pathname === '/analytics'
@@ -38,20 +38,20 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
       path: '/reports',
       active: location.pathname === '/reports'
     },
-    {
-      id: 'schedule',
-      label: 'Schedule',
-      icon: Calendar,
-      path: '/schedule',
-      active: location.pathname === '/schedule'
-    },
-    {
-      id: 'settings',
-      label: 'Settings',
-      icon: Settings,
-      path: '/settings',
-      active: location.pathname === '/settings'
-    }
+    // {
+    //   id: 'schedule',
+    //   label: 'Schedule',
+    //   icon: Calendar,
+    //   path: '/schedule',
+    //   active: location.pathname === '/schedule'
+    // },
+    // {
+    //   id: 'settings',
+    //   label: 'Settings',
+    //   icon: Settings,
+    //   path: '/settings',
+    //   active: location.pathname === '/settings'
+    // }
   ];
 
   const handleNavigation = (path) => {

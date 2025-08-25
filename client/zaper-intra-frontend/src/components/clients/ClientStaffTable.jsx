@@ -7,15 +7,7 @@ import {
   Clock, 
   Phone,
   Mail,
-  Calendar,
-  User,
-  MapPin,
-  Briefcase,
-  GraduationCap,
-  Shield,
-  Camera,
-  Smartphone,
-  DollarSign
+  Smartphone
 } from 'lucide-react';
 import { Table } from '../ui/Table';
 import useClientStaff from '../../hooks/useClientStaff';
@@ -409,58 +401,23 @@ const ClientStaffTable = ({ clientId, className = '' }) => {
         </div>
       </div>
 
-      {/* Staff Table with Horizontal Scrolling */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        {/* Search Bar */}
-        <div className="p-4 border-b border-gray-200">
-          <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
-            <div className="flex-1 w-full sm:w-auto">
-              <input
-                type="text"
-                placeholder="Search staff by name, code, designation, or any field..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyUp={(e) => {
-                  if (e.key === 'Enter') {
-                    handleSearch(e.target.value);
-                  }
-                }}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
-              />
-            </div>
-            <button
-              onClick={() => handleSearch(searchTerm)}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-            >
-              Search
-            </button>
-            {pagination && (
-              <div className="text-sm text-gray-500 whitespace-nowrap">
-                Showing {staffs.length} of {pagination.total} staff
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Horizontally Scrollable Table */}
-        <div className="overflow-x-auto">
-          <div className="min-w-max">
-            <Table
-              data={staffs.map(staff => ({ ...staff, id: staff.staff_id }))}
-              columns={columns}
-              loading={loading}
-              error={error}
-              pagination={pagination}
-              onPageChange={handlePageChange}
-              searchValue={searchTerm}
-              emptyState={emptyState}
-              showSearch={false} // We have custom search above
-              showPagination={true}
-              className="min-w-full"
-            />
-          </div>
-        </div>
-      </div>
+      {/* Using the existing Table component */}
+      <Table
+        data={staffs.map(staff => ({ ...staff, id: staff.staff_id }))}
+        columns={columns}
+        loading={loading}
+        error={error}
+        pagination={pagination}
+        onPageChange={handlePageChange}
+        onSearch={handleSearch}
+        searchValue={searchTerm}
+        searchPlaceholder="Search staff by name, code, designation, or any field..."
+        emptyState={emptyState}
+        rowClickable={false}
+        sortable={false}
+        showSearch={true}
+        showPagination={true}
+      />
     </div>
   );
 };

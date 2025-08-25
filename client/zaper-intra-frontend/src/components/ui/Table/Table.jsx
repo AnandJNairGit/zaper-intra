@@ -21,8 +21,9 @@ const Table = ({
   sortable = false,
   onSort,
   sortConfig = null,
-  onRowClick, // New prop for row click handler
-  rowClickable = false // New prop to enable row clicking
+  onRowClick,
+  rowClickable = false,
+  horizontalScroll = false // New prop for horizontal scrolling
 }) => {
   const [localSearchValue, setLocalSearchValue] = useState(searchValue);
 
@@ -109,6 +110,9 @@ const Table = ({
     );
   }
 
+  // Check if we need horizontal scrolling based on column widths
+  const needsHorizontalScroll = horizontalScroll || columns.some(col => col.width);
+
   return (
     <div className={`space-y-4 ${className}`}>
       {/* Search Bar */}
@@ -135,66 +139,69 @@ const Table = ({
 
       {/* Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            {/* Table Header */}
-            <thead className="bg-gray-50">
-              <tr>
-                {columns.map((column) => (
-                  <th
-                    key={column.key}
-                    className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${
-                      sortable && column.sortable ? 'cursor-pointer hover:bg-gray-100' : ''
-                    }`}
-                    onClick={() => column.sortable && handleSort(column.key)}
-                    style={{ width: column.width || 'auto' }}
-                  >
-                    <div className="flex items-center space-x-1">
-                      <span>{column.title}</span>
-                      {sortable && column.sortable && getSortIcon(column.key)}
-                    </div>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-
-            {/* Table Body */}
-            <tbody className="bg-white divide-y divide-gray-200">
-              {data.length > 0 ? (
-                data.map((item, index) => (
-                  <tr 
-                    key={item.id || index} 
-                    className={`transition-colors ${
-                      rowClickable 
-                        ? 'hover:bg-indigo-50 cursor-pointer active:bg-indigo-100' 
-                        : 'hover:bg-gray-50'
-                    }`}
-                    onClick={() => handleRowClick(item)}
-                  >
-                    {columns.map((column) => (
-                      <td
-                        key={`${item.id || index}-${column.key}`}
-                        className={`px-6 py-4 whitespace-nowrap ${column.className || ''}`}
-                      >
-                        {renderCellContent(item, column)}
-                      </td>
-                    ))}
-                  </tr>
-                ))
-              ) : (
+        {/* Table Container with conditional horizontal scroll */}
+        <div className={needsHorizontalScroll ? "overflow-x-auto" : ""}>
+          <div className={needsHorizontalScroll ? "min-w-max" : ""}>
+            <table className="min-w-full divide-y divide-gray-200">
+              {/* Table Header */}
+              <thead className="bg-gray-50">
                 <tr>
-                  <td colSpan={columns.length} className="px-6 py-4">
-                    {emptyState || defaultEmptyState}
-                  </td>
+                  {columns.map((column) => (
+                    <th
+                      key={column.key}
+                      className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${
+                        sortable && column.sortable ? 'cursor-pointer hover:bg-gray-100' : ''
+                      }`}
+                      onClick={() => column.sortable && handleSort(column.key)}
+                      style={{ width: column.width || 'auto' }}
+                    >
+                      <div className="flex items-center space-x-1">
+                        <span>{column.title}</span>
+                        {sortable && column.sortable && getSortIcon(column.key)}
+                      </div>
+                    </th>
+                  ))}
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+
+              {/* Table Body */}
+              <tbody className="bg-white divide-y divide-gray-200">
+                {data.length > 0 ? (
+                  data.map((item, index) => (
+                    <tr 
+                      key={item.id || index} 
+                      className={`transition-colors ${
+                        rowClickable 
+                          ? 'hover:bg-indigo-50 cursor-pointer active:bg-indigo-100' 
+                          : 'hover:bg-gray-50'
+                      }`}
+                      onClick={() => handleRowClick(item)}
+                    >
+                      {columns.map((column) => (
+                        <td
+                          key={`${item.id || index}-${column.key}`}
+                          className={`px-6 py-4 whitespace-nowrap ${column.className || ''}`}
+                        >
+                          {renderCellContent(item, column)}
+                        </td>
+                      ))}
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={columns.length} className="px-6 py-4">
+                      {emptyState || defaultEmptyState}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        {/* Pagination */}
+        {/* Pagination - Outside scrollable area */}
         {showPagination && pagination && pagination.total_pages > 1 && (
-          <div className="border-t border-gray-200">
+          <div className="border-t border-gray-200 bg-white">
             <Pagination
               pagination={pagination}
               onPageChange={onPageChange}
