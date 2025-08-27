@@ -21,21 +21,21 @@ const sequelize = new Sequelize(
 
 const db = {};
 
-// Import existing models
+// Import all models
 db.Client = require('./Client')(sequelize);
 db.ClientProject = require('./ClientProject')(sequelize);
 db.ClientUser = require('./ClientUser')(sequelize);
 db.ClientRole = require('./ClientRole')(sequelize);
+db.ClientJobProfile = require('./ClientJobProfile')(sequelize);
 db.User = require('./User')(sequelize);
 db.UserPhoto = require('./UserPhoto')(sequelize);
 db.UserSalary = require('./UserSalary')(sequelize);
-
-// Import new models
-db.ClientJobProfile = require('./ClientJobProfile')(sequelize);
 db.UserJobProfile = require('./UserJobProfile')(sequelize);
 db.UserNotificationToken = require('./UserNotificationToken')(sequelize);
+db.StaffAccommodation = require('./StaffAccommodation')(sequelize);
+db.UserCommunicationDetails = require('./UserCommunicationDetails')(sequelize);
 
-// Import associations
+// Apply modular associations
 require('./associations')(db);
 
 db.sequelize = sequelize;
