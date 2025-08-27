@@ -1,7 +1,8 @@
 // src/controllers/staffController.js
-const staffService = require('../services/staffService');
+const staffService = require('../services/staff/StaffService');
 const { successResponse, errorResponse } = require('../utils/response');
 const logger = require('../utils/logger');
+const { STAFF_CONSTANTS } = require('../utils/constants');
 
 class StaffController {
   /**
@@ -11,48 +12,18 @@ class StaffController {
   async getStaffByClient(req, res) {
     try {
       const { clientId } = req.params;
-      const {
-        page = 1,
-        limit = 50,
-        search = '',
-        status = null,
-        orderBy = 'joining_date',
-        orderDirection = 'DESC'
-      } = req.query;
+      const queryOptions = req.query;
 
-      // Validate parameters
+      // Basic validation
       if (!clientId || isNaN(clientId)) {
         return errorResponse(res, 'Invalid client ID. Must be a valid number.', 400);
       }
 
-      if (page < 1 || limit < 1 || limit > 100) {
-        return errorResponse(res, 'Invalid pagination. Page >= 1, limit between 1-100.', 400);
-      }
-
-      const validOrderFields = ['joining_date', 'name', 'status', 'code'];
-      if (!validOrderFields.includes(orderBy)) {
-        return errorResponse(res, `Invalid orderBy field. Must be one of: ${validOrderFields.join(', ')}`, 400);
-      }
-
-      const validDirections = ['ASC', 'DESC'];
-      if (!validDirections.includes(orderDirection.toUpperCase())) {
-        return errorResponse(res, 'Invalid orderDirection. Must be ASC or DESC.', 400);
-      }
-
-      const options = {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        search: search.trim(),
-        status,
-        orderBy,
-        orderDirection
-      };
-
-      const result = await staffService.getStaffDetailsByClient(parseInt(clientId), options);
+      const result = await staffService.getStaffDetailsByClient(parseInt(clientId), queryOptions);
       
       logger.info(`Retrieved ${result.staffs.length} staff records for client ${clientId}`, {
         clientId: parseInt(clientId),
-        page: options.page,
+        page: result.pagination.page,
         total: result.pagination.total
       });
       
@@ -129,6 +100,43 @@ class StaffController {
       return errorResponse(
         res,
         'Failed to retrieve staff details',
+        500,
+        process.env.NODE_ENV === 'development' ? error.message : null
+      );
+    }
+  }
+
+  /**
+   * Get staff statistics for a client
+   * GET /api/v1/staffs/client/:clientId/statistics
+   */
+  async getStaffStatistics(req, res) {
+    try {
+      const { clientId } = req.params;
+
+      if (!clientId || isNaN(clientId)) {
+        return errorResponse(res, 'Invalid client ID. Must be a valid number.', 400);
+      }
+
+      const statistics = await staffService.getStaffStatistics(parseInt(clientId));
+      
+      return successResponse(
+        res,
+        'Staff statistics retrieved successfully',
+        { statistics },
+        200
+      );
+
+    } catch (error) {
+      logger.error(`Error in getStaffStatistics for client ${req.params.clientId}:`, error);
+
+      if (error.message.includes('Client not found')) {
+        return errorResponse(res, 'Client not found', 404);
+      }
+
+      return errorResponse(
+        res,
+        'Failed to retrieve staff statistics',
         500,
         process.env.NODE_ENV === 'development' ? error.message : null
       );

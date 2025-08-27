@@ -10,22 +10,22 @@ const router = express.Router();
  * @access  Public (internal use)
  * @param   clientId - Client ID
  * @query   page, limit, search, status, orderBy, orderDirection
- * @returns JSON with comprehensive staff information including:
- *          - Basic info (name, code, status, onboard date)
- *          - Personal details (phone, email, gender, age, education)
- *          - Professional info (designation, salary, overtime)
- *          - Face registration status
- *          - Benefits eligibility
- *          - Device information
  */
 router.get('/client/:clientId', staffController.getStaffByClient);
+
+/**
+ * @route   GET /api/v1/staffs/client/:clientId/statistics
+ * @desc    Get staff statistics for a specific client
+ * @access  Public (internal use)
+ * @param   clientId - Client ID
+ */
+router.get('/client/:clientId/statistics', staffController.getStaffStatistics);
 
 /**
  * @route   GET /api/v1/staffs/:staffId
  * @desc    Get single staff member details by staff ID
  * @access  Public (internal use)
  * @param   staffId - Staff ID
- * @returns JSON with comprehensive staff information
  */
 router.get('/:staffId', staffController.getStaffById);
 
