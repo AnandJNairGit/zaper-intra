@@ -7,7 +7,14 @@ class StaffDataTransformer {
    * @returns {Array} Formatted staff data
    */
   static transformStaffData(rawStaffData, relatedData) {
-    const { photosMap, jobProfilesMap, salariesMap, tokensMap } = relatedData;
+    const { 
+      photosMap, 
+      jobProfilesMap, 
+      salariesMap, 
+      tokensMap, 
+      accommodationsMap, 
+      communicationDetailsMap 
+    } = relatedData;
 
     return rawStaffData.map(staff => {
       const staffData = staff.get({ plain: true });
@@ -18,13 +25,18 @@ class StaffDataTransformer {
       const jobProfile = jobProfilesMap[user.user_id] || {};
       const salary = salariesMap[user.user_id] || {};
       const tokens = tokensMap[user.user_id] || [];
+      const accommodations = accommodationsMap[user.user_id] || [];
+      const communicationDetails = communicationDetailsMap[user.user_id] || [];
 
-      return this.buildStaffObject(staffData, user, role, clientInfo, photos, jobProfile, salary, tokens);
+      return this.buildStaffObject(
+        staffData, user, role, clientInfo, photos, 
+        jobProfile, salary, tokens, accommodations, communicationDetails
+      );
     });
   }
 
   /**
-   * Build comprehensive staff object
+   * Build comprehensive staff object including accommodation details
    * @param {Object} staffData - Staff data
    * @param {Object} user - User data
    * @param {Object} role - Role data
@@ -33,9 +45,11 @@ class StaffDataTransformer {
    * @param {Object} jobProfile - Job profile data
    * @param {Object} salary - Salary data
    * @param {Array} tokens - Notification tokens array
+   * @param {Array} accommodations - Accommodation details array
+   * @param {Array} communicationDetails - Communication details array
    * @returns {Object} Formatted staff object
    */
-  static buildStaffObject(staffData, user, role, clientInfo, photos, jobProfile, salary, tokens) {
+  static buildStaffObject(staffData, user, role, clientInfo, photos, jobProfile, salary, tokens, accommodations, communicationDetails) {
     return {
       // Basic Information
       staff_id: staffData.staff_id,
@@ -105,6 +119,12 @@ class StaffDataTransformer {
       ctc: salary.ctc || null,
       salary_currency: salary.currency || null,
       
+      // Communication Details (NEW)
+      communication_details: this.formatCommunicationDetails(communicationDetails),
+      
+      // Accommodation Details (NEW)
+      accommodation_details: this.formatAccommodationDetails(accommodations),
+      
       // Additional Information
       accommodation: user.description || null,
       profile_image: user.profile_image || null,
@@ -120,6 +140,41 @@ class StaffDataTransformer {
       // Metadata
       record_created_at: staffData.created_at || null
     };
+  }
+
+  /**
+   * Format communication details array
+   * @param {Array} communicationDetails - Communication details array
+   * @returns {Array} Formatted communication details
+   */
+  static formatCommunicationDetails(communicationDetails) {
+    return communicationDetails.map(detail => ({
+      communication_id: detail.communication_id,
+      communication_address: detail.communication_address,
+      permanent_address: detail.permanent_address,
+      country: detail.country,
+      state: detail.state,
+      pincode: detail.pincode,
+      phone_number: detail.phone_number,
+      emergency_contact_name: detail.emergency_contact_name,
+      emergency_contact_number: detail.emergency_contact_number,
+      bus_number: detail.bus_number
+    }));
+  }
+
+  /**
+   * Format accommodation details array
+   * @param {Array} accommodations - Accommodation details array
+   * @returns {Array} Formatted accommodation details
+   */
+  static formatAccommodationDetails(accommodations) {
+    return accommodations.map(accommodation => ({
+      accommodation_id: accommodation.accommodation_id,
+      location: accommodation.location,
+      city: accommodation.city,
+      country: accommodation.country,
+      created_at: accommodation.created_at
+    }));
   }
 
   /**
@@ -166,6 +221,7 @@ class StaffDataTransformer {
       inactive_staff: staffDetails.filter(s => s.status === 'inactive').length,
       face_registered: staffDetails.filter(s => s.is_face_registered).length,
       ot_applicable_count: staffDetails.filter(s => s.ot_applicable).length,
+      staff_with_accommodation: staffDetails.filter(s => s.accommodation_details.length > 0).length,
       client_info: {
         client_id: clientInfo.client_id,
         client_name: clientInfo.client_name

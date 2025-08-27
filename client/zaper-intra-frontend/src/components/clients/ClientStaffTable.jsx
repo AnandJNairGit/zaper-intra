@@ -7,7 +7,10 @@ import {
   Clock, 
   Phone,
   Mail,
-  Smartphone
+  Smartphone,
+  MapPin,
+  Home,
+  AlertTriangle
 } from 'lucide-react';
 import { Table } from '../ui/Table';
 import useClientStaff from '../../hooks/useClientStaff';
@@ -76,6 +79,101 @@ const ClientStaffTable = ({ clientId, className = '' }) => {
             </div>
           ) : (
             <div className="text-xs text-gray-400">No email</div>
+          )}
+        </div>
+      )
+    },
+    {
+      key: 'communication_details',
+      title: 'Communication Details',
+      width: '250px',
+      render: (_, item) => (
+        <div className="space-y-1">
+          {item.communication_details && item.communication_details.length > 0 ? (
+            item.communication_details.map((comm, index) => (
+              <div key={index} className="space-y-1">
+                {comm.communication_address && (
+                  <div className="flex items-start text-xs text-gray-900">
+                    <MapPin className="w-3 h-3 mr-1 mt-0.5 flex-shrink-0" />
+                    <span>{comm.communication_address}</span>
+                  </div>
+                )}
+                {comm.permanent_address && (
+                  <div className="flex items-start text-xs text-gray-500">
+                    <Home className="w-3 h-3 mr-1 mt-0.5 flex-shrink-0" />
+                    <span>Permanent: {comm.permanent_address}</span>
+                  </div>
+                )}
+                {comm.country && comm.state && (
+                  <div className="text-xs text-gray-500">
+                    {comm.state}, {comm.country} {comm.pincode && `- ${comm.pincode}`}
+                  </div>
+                )}
+                {comm.bus_number && (
+                  <div className="text-xs text-gray-500">Bus: {comm.bus_number}</div>
+                )}
+              </div>
+            ))
+          ) : (
+            <div className="text-xs text-gray-400">No communication details</div>
+          )}
+        </div>
+      )
+    },
+    {
+      key: 'emergency_contact',
+      title: 'Emergency Contact',
+      width: '180px',
+      render: (_, item) => (
+        <div className="space-y-1">
+          {item.communication_details && item.communication_details.length > 0 ? (
+            item.communication_details.map((comm, index) => (
+              <div key={index} className="space-y-1">
+                {comm.emergency_contact_name && (
+                  <div className="flex items-center text-xs text-gray-900">
+                    <AlertTriangle className="w-3 h-3 mr-1 text-orange-500" />
+                    <span>{comm.emergency_contact_name}</span>
+                  </div>
+                )}
+                {comm.emergency_contact_number && (
+                  <div className="flex items-center text-xs text-gray-500">
+                    <Phone className="w-3 h-3 mr-1" />
+                    <span>{comm.emergency_contact_number}</span>
+                  </div>
+                )}
+              </div>
+            ))
+          ) : (
+            <div className="text-xs text-gray-400">No emergency contact</div>
+          )}
+        </div>
+      )
+    },
+    {
+      key: 'accommodation_details',
+      title: 'Accommodation Details',
+      width: '200px',
+      render: (_, item) => (
+        <div className="space-y-1">
+          {item.accommodation_details && item.accommodation_details.length > 0 ? (
+            item.accommodation_details.map((acc, index) => (
+              <div key={index} className="space-y-1">
+                <div className="flex items-start text-xs text-gray-900">
+                  <Home className="w-3 h-3 mr-1 mt-0.5 flex-shrink-0" />
+                  <span>{acc.location}</span>
+                </div>
+                <div className="text-xs text-gray-500">
+                  {acc.city}, {acc.country}
+                </div>
+                {acc.created_at && (
+                  <div className="text-xs text-gray-500">
+                    Since: {new Date(acc.created_at).toLocaleDateString()}
+                  </div>
+                )}
+              </div>
+            ))
+          ) : (
+            <div className="text-xs text-gray-400">No accommodation</div>
           )}
         </div>
       )
@@ -388,20 +486,7 @@ const ClientStaffTable = ({ clientId, className = '' }) => {
   );
 
   return (
-    <div className={`space-y-6 ${className}`}>
-      {/* Staff Table Header */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div className="flex items-center justify-between">
-          <h3 className="text-xl font-semibold text-gray-900">Staff Members</h3>
-          {summary && (
-            <div className="text-sm text-gray-600">
-              Client: {summary.client_info?.client_name} | Total: {summary.total_staff} staff
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Using the existing Table component */}
+    <div className={`${className}`}>
       <Table
         data={staffs.map(staff => ({ ...staff, id: staff.staff_id }))}
         columns={columns}
@@ -417,6 +502,7 @@ const ClientStaffTable = ({ clientId, className = '' }) => {
         sortable={false}
         showSearch={true}
         showPagination={true}
+        horizontalScroll={true}
       />
     </div>
   );
