@@ -1,5 +1,7 @@
 // src/components/clients/ClientStaffTable.jsx
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import Select from 'react-select';
+import { debounce } from 'lodash';
 import { 
   Users, 
   Eye, 
@@ -10,27 +12,133 @@ import {
   Smartphone,
   MapPin,
   Home,
-  AlertTriangle
+  AlertTriangle,
+  Search,
+  Filter
 } from 'lucide-react';
 import { Table } from '../ui/Table';
-import AdvancedSearch from '../ui/AdvancedSearch';
 import useClientStaff from '../../hooks/useClientStaff';
+import useSearchFields from '../../hooks/useSearchFields';
 
 const ClientStaffTable = ({ clientId, className = '' }) => {
-  const [searchParams, setSearchParams] = useState({});
+  // Search-related state
+  const [selectedField, setSelectedField] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const [searchType, setSearchType] = useState('like');
+  
+  // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [pageLimit] = useState(10);
 
-  const queryParams = useMemo(() => ({
-    page: currentPage,
-    limit: pageLimit,
-    ...searchParams
-  }), [currentPage, pageLimit, searchParams]);
+  // Fetch search fields configuration
+  const { searchFields, searchTypes, loading: fieldsLoading } = useSearchFields();
 
+  // Create stable debounced function
+  const debouncedSetSearch = useMemo(
+    () => debounce((value) => {
+      setDebouncedSearchTerm(value);
+      setCurrentPage(1);
+    }, 500),
+    []
+  );
+
+  // Handle search input changes
+  useEffect(() => {
+    debouncedSetSearch(searchTerm);
+    
+    return () => {
+      debouncedSetSearch.cancel();
+    };
+  }, [searchTerm, debouncedSetSearch]);
+
+  // Prepare query parameters
+  const queryParams = useMemo(() => {
+    const params = {
+      page: currentPage,
+      limit: pageLimit
+    };
+
+    // Only add search params if they have values
+    if (debouncedSearchTerm.trim()) {
+      params.search = debouncedSearchTerm.trim();
+    }
+    
+    // Use alias instead of field for searchField
+    if (selectedField?.value) {
+      params.searchField = selectedField.value;
+    }
+    
+    if (searchType && searchType !== 'like') {
+      params.searchType = searchType;
+    }
+
+    console.log('Query params being sent:', params); // Debug log
+
+    return params;
+  }, [currentPage, pageLimit, debouncedSearchTerm, selectedField, searchType]);
+
+  // Fetch staff data
   const { staffs, pagination, summary, loading, error, refetch } = useClientStaff(clientId, queryParams);
 
-  // Define comprehensive table columns for all staff details
-  const columns = [
+  // Use alias for field options instead of internal field names
+  const fieldOptions = useMemo(() => {
+    if (!searchFields.length) return [];
+    
+    return [
+      { value: null, label: 'All Fields', icon: Search },
+      ...searchFields.map(field => ({
+        value: field.alias, // Use alias instead of field.field
+        label: field.alias.charAt(0).toUpperCase() + field.alias.slice(1),
+        type: field.type,
+        internalField: field.field
+      }))
+    ];
+  }, [searchFields]);
+
+  // Prepare options for search type selector
+  const typeOptions = useMemo(() => {
+    return searchTypes.map(type => ({
+      value: type,
+      label: type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())
+    }));
+  }, [searchTypes]);
+
+  // Search input handler
+  const handleSearchChange = useCallback((e) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+  }, []);
+
+  // Field selection handler
+  const handleFieldChange = useCallback((option) => {
+    setSelectedField(option);
+    setCurrentPage(1);
+  }, []);
+
+  // Search type handler
+  const handleSearchTypeChange = useCallback((e) => {
+    setSearchType(e.target.value);
+    setCurrentPage(1);
+  }, []);
+
+  // Pagination handler
+  const handlePageChange = useCallback((newPage) => {
+    setCurrentPage(newPage);
+  }, []);
+
+  // Clear all filters
+  const handleClearFilters = useCallback(() => {
+    setSelectedField(null);
+    setSearchTerm('');
+    setDebouncedSearchTerm('');
+    setSearchType('like');
+    setCurrentPage(1);
+    debouncedSetSearch.cancel();
+  }, [debouncedSetSearch]);
+
+  // Complete table columns with ALL original fields
+  const columns = useMemo(() => [
     {
       key: 'staff_details',
       title: 'Staff Details',
@@ -455,56 +563,129 @@ const ClientStaffTable = ({ clientId, className = '' }) => {
         </div>
       )
     }
-  ];
+  ], []);
 
-  const handleSearch = (newSearchParams) => {
-    setSearchParams(newSearchParams);
-    setCurrentPage(1);
-    refetch({
-      page: 1,
-      limit: pageLimit,
-      ...newSearchParams
-    });
-  };
-
-  const handlePageChange = (newPage) => {
-    setCurrentPage(newPage);
-    refetch({
-      ...queryParams,
-      page: newPage
-    });
-  };
-
-  // Custom empty state for staff
-  const emptyState = (
+  // Custom empty state
+  const emptyState = useMemo(() => (
     <div className="text-center py-12">
       <Users className="w-16 h-16 mx-auto mb-4 text-gray-300" />
       <p className="text-lg font-medium text-gray-900">No staff members found</p>
       <p className="text-sm text-gray-500 mt-1">
-        {searchParams.search ? 'Try adjusting your search terms' : 'No staff members registered for this client'}
+        {debouncedSearchTerm ? 'Try adjusting your search terms' : 'No staff members registered for this client'}
       </p>
     </div>
-  );
+  ), [debouncedSearchTerm]);
 
-  // Custom search component with pagination info
-  const customSearchComponent = (
-    <div className="space-y-4">
-      <AdvancedSearch 
-        onSearch={handleSearch}
-        placeholder="Search staff by any field..."
-      />
-      {pagination && (
-        <div className="flex justify-end">
-          <div className="text-sm text-gray-500">
-            Showing {staffs.length} of {pagination.total} staff members
-          </div>
-        </div>
-      )}
-    </div>
-  );
+  if (fieldsLoading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
 
   return (
-    <div className={`${className}`}>
+    <div className={`space-y-6 ${className}`}>
+      {/* Advanced Search Controls */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+        <div className="flex items-center space-x-4">
+          {/* Field Selector */}
+          <div className="w-64">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              <Filter className="w-4 h-4 inline mr-1" />
+              Search Field
+            </label>
+            <Select
+              options={fieldOptions}
+              value={selectedField}
+              onChange={handleFieldChange}
+              placeholder="Select field to search"
+              isClearable
+              isLoading={fieldsLoading}
+              className="text-sm"
+              styles={{
+                control: (provided) => ({
+                  ...provided,
+                  minHeight: '38px',
+                  border: '1px solid #d1d5db',
+                  '&:hover': {
+                    border: '1px solid #6366f1'
+                  }
+                })
+              }}
+            />
+          </div>
+
+          {/* Search Input */}
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              <Search className="w-4 h-4 inline mr-1" />
+              Search Term
+            </label>
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={handleSearchChange}
+              placeholder={selectedField ? `Search by ${selectedField.label.toLowerCase()}...` : "Search across all fields..."}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
+            />
+          </div>
+
+          {/* Search Type */}
+          <div className="w-48">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Search Type
+            </label>
+            <select
+              value={searchType}
+              onChange={handleSearchTypeChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            >
+              {typeOptions.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Clear Filters */}
+          <div className="pt-7">
+            <button
+              onClick={handleClearFilters}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+
+        {/* Search Summary */}
+        {(debouncedSearchTerm || selectedField) && (
+          <div className="mt-4 p-3 bg-indigo-50 rounded-md">
+            <p className="text-sm text-indigo-700">
+              <span className="font-medium">Active filters:</span>
+              {selectedField && (
+                <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                  Field: {selectedField.label}
+                </span>
+              )}
+              {debouncedSearchTerm && (
+                <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                  Search: "{debouncedSearchTerm}"
+                </span>
+              )}
+              {searchType !== 'like' && (
+                <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                  Type: {searchType.replace('_', ' ')}
+                </span>
+              )}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Staff Table */}
       <Table
         data={staffs.map(staff => ({ ...staff, id: staff.staff_id }))}
         columns={columns}
@@ -512,13 +693,13 @@ const ClientStaffTable = ({ clientId, className = '' }) => {
         error={error}
         pagination={pagination}
         onPageChange={handlePageChange}
+        searchValue=""
         emptyState={emptyState}
         rowClickable={false}
         sortable={false}
-        showSearch={true}
+        showSearch={false}
         showPagination={true}
         horizontalScroll={true}
-        customSearchComponent={customSearchComponent}
       />
     </div>
   );

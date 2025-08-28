@@ -16,7 +16,7 @@ export class StaffService {
   }
 
   /**
-   * Get available search fields and types
+   * Get available search fields for staff search
    */
   async getSearchFields() {
     try {
