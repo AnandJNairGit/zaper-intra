@@ -23,7 +23,8 @@ const Table = ({
   sortConfig = null,
   onRowClick,
   rowClickable = false,
-  horizontalScroll = false // New prop for horizontal scrolling
+  horizontalScroll = false,
+  customSearchComponent = null // New prop for custom search component
 }) => {
   const [localSearchValue, setLocalSearchValue] = useState(searchValue);
 
@@ -34,7 +35,7 @@ const Table = ({
     if (onSearch) {
       clearTimeout(window.tableSearchTimeout);
       window.tableSearchTimeout = setTimeout(() => {
-        onSearch(value);
+        onSearch({ search: value });
       }, 500);
     }
   };
@@ -110,36 +111,36 @@ const Table = ({
     );
   }
 
-  // Check if we need horizontal scrolling based on column widths
   const needsHorizontalScroll = horizontalScroll || columns.some(col => col.width);
 
   return (
     <div className={`space-y-4 ${className}`}>
-      {/* Search Bar */}
+      {/* Search Bar - Use custom component if provided */}
       {showSearch && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-          <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
-            <div className="flex-1 w-full sm:w-auto">
-              <input
-                type="text"
-                placeholder={searchPlaceholder}
-                value={localSearchValue}
-                onChange={handleSearchChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
-              />
-            </div>
-            {pagination && (
-              <div className="text-sm text-gray-500 whitespace-nowrap">
-                Showing {data.length} of {pagination.total} records
+        customSearchComponent || (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+            <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+              <div className="flex-1 w-full sm:w-auto">
+                <input
+                  type="text"
+                  placeholder={searchPlaceholder}
+                  value={localSearchValue}
+                  onChange={handleSearchChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
+                />
               </div>
-            )}
+              {pagination && (
+                <div className="text-sm text-gray-500 whitespace-nowrap">
+                  Showing {data.length} of {pagination.total} records
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )
       )}
 
       {/* Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        {/* Table Container with conditional horizontal scroll */}
         <div className={needsHorizontalScroll ? "overflow-x-auto" : ""}>
           <div className={needsHorizontalScroll ? "min-w-max" : ""}>
             <table className="min-w-full divide-y divide-gray-200">
@@ -199,7 +200,7 @@ const Table = ({
           </div>
         </div>
 
-        {/* Pagination - Outside scrollable area */}
+        {/* Pagination */}
         {showPagination && pagination && pagination.total_pages > 1 && (
           <div className="border-t border-gray-200 bg-white">
             <Pagination

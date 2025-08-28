@@ -25,7 +25,7 @@ class StaffValidator {
   }
 
   /**
-   * Validate and sanitize query options
+   * Validate and sanitize query options with enhanced search capabilities
    * @param {Object} options - Query options
    * @returns {Object} Validated options
    */
@@ -34,6 +34,8 @@ class StaffValidator {
       page = STAFF_CONSTANTS.DEFAULT_PAGINATION.PAGE,
       limit = STAFF_CONSTANTS.DEFAULT_PAGINATION.LIMIT,
       search = '',
+      searchField = null,
+      searchType = 'like',
       status = null,
       orderBy = 'joining_date',
       orderDirection = 'DESC'
@@ -57,19 +59,45 @@ class StaffValidator {
       : 'DESC';
 
     // Validate status
-    const validStatus = status === STAFF_CONSTANTS.STATUS_VALUES.ACTIVE || 
-                       status === STAFF_CONSTANTS.STATUS_VALUES.INACTIVE 
-      ? status 
+    const validStatus = [
+      STAFF_CONSTANTS.STATUS_VALUES.ACTIVE, 
+      STAFF_CONSTANTS.STATUS_VALUES.INACTIVE
+    ].includes(status) ? status : null;
+
+    // Validate searchField and searchType
+    const validSearchField = searchField && 
+      Object.keys(STAFF_CONSTANTS.SEARCHABLE_FIELDS).includes(searchField) 
+      ? searchField 
       : null;
+
+    const validSearchType = ['like', 'exact', 'starts_with', 'ends_with'].includes(searchType)
+      ? searchType
+      : 'like';
 
     return {
       page: validatedPage,
       limit: validatedLimit,
       search: search.toString().trim(),
+      searchField: validSearchField,
+      searchType: validSearchType,
       status: validStatus,
       orderBy: validOrderBy,
       orderDirection: validDirection
     };
+  }
+
+  /**
+   * Get available search fields for API documentation
+   * @returns {Array} Array of searchable field objects
+   */
+  static getSearchableFields() {
+    return Object.keys(STAFF_CONSTANTS.SEARCHABLE_FIELDS).map(alias => ({
+      alias,
+      field: STAFF_CONSTANTS.SEARCHABLE_FIELDS[alias],
+      type: STAFF_CONSTANTS.TEXT_SEARCHABLE_FIELDS.includes(
+        STAFF_CONSTANTS.SEARCHABLE_FIELDS[alias]
+      ) ? 'text' : 'exact'
+    }));
   }
 }
 

@@ -3,19 +3,47 @@ const { Op } = require('sequelize');
 
 class QueryHelpers {
   /**
-   * Build search condition for multiple fields
+   * Build advanced search condition for specific field or multiple fields
+   * @param {string} searchTerm - Search term
+   * @param {string|Array} fields - Single field or array of fields to search in
+   * @param {string} searchType - Type of search: 'like', 'exact', 'starts_with', 'ends_with'
+   * @returns {Object} Sequelize where condition
+   */
+  static buildAdvancedSearchCondition(searchTerm, fields, searchType = 'like') {
+    if (!searchTerm) return {};
+
+    const fieldsArray = Array.isArray(fields) ? fields : [fields];
+    const conditions = [];
+
+    fieldsArray.forEach(field => {
+      switch (searchType) {
+        case 'exact':
+          conditions.push({ [field]: searchTerm });
+          break;
+        case 'starts_with':
+          conditions.push({ [field]: { [Op.iLike]: `${searchTerm}%` } });
+          break;
+        case 'ends_with':
+          conditions.push({ [field]: { [Op.iLike]: `%${searchTerm}` } });
+          break;
+        case 'like':
+        default:
+          conditions.push({ [field]: { [Op.iLike]: `%${searchTerm}%` } });
+          break;
+      }
+    });
+
+    return conditions.length === 1 ? conditions[0] : { [Op.or]: conditions };
+  }
+
+  /**
+   * Build search condition for multiple fields (legacy method)
    * @param {string} searchTerm - Search term
    * @param {Array} fields - Fields to search in
    * @returns {Object} Sequelize where condition
    */
   static buildSearchCondition(searchTerm, fields) {
-    if (!searchTerm || !fields.length) return {};
-
-    return {
-      [Op.or]: fields.map(field => ({
-        [field]: { [Op.iLike]: `%${searchTerm}%` }
-      }))
-    };
+    return this.buildAdvancedSearchCondition(searchTerm, fields, 'like');
   }
 
   /**
@@ -61,6 +89,16 @@ class QueryHelpers {
       }
     });
     return map;
+  }
+
+  /**
+   * Validate and get database field name from search alias
+   * @param {string} searchField - Search field alias (e.g., 'name', 'phone')
+   * @param {Object} fieldMapping - Mapping of aliases to actual database fields
+   * @returns {string|null} Database field name or null if invalid
+   */
+  static getDbFieldName(searchField, fieldMapping) {
+    return fieldMapping[searchField] || null;
   }
 }
 

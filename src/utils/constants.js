@@ -1,12 +1,43 @@
 // src/utils/constants.js
 const STAFF_CONSTANTS = {
   ALLOWED_ORDER_FIELDS: ['joining_date', 'name', 'status', 'code', 'created_at'],
-  SEARCH_FIELDS: ['user_name', 'display_name', 'phone_number'],
+  
+  // Enhanced searchable fields with detailed mapping
+  SEARCHABLE_FIELDS: {
+    // User table fields
+    'name': 'display_name',
+    'username': 'user_name', 
+    'phone': 'phone_number',
+    'email': 'emailid',
+    'gender': 'gender',
+    'religion': 'religion',
+    'education': 'education',
+    'skills': 'skills_and_proficiency',
+    'language': 'language_spoken',
+    'skill_type': 'skill_type',
+    'user_type': 'type',
+    
+    // Staff table fields
+    'code': 'code',
+    'status': 'current_active'
+  },
+  
+  // Fields that allow LIKE search (text fields)
+  TEXT_SEARCHABLE_FIELDS: [
+    'display_name', 'user_name', 'phone_number', 'emailid', 
+    'gender', 'religion', 'education', 'skills_and_proficiency', 
+    'language_spoken', 'skill_type', 'type', 'code'
+  ],
+  
+  // Fields that require exact match (boolean, enum fields)
+  EXACT_MATCH_FIELDS: ['current_active'],
+  
   DEFAULT_PAGINATION: {
     PAGE: 1,
     LIMIT: 50,
     MAX_LIMIT: 100
   },
+  
   STATUS_VALUES: {
     ACTIVE: 'active',
     INACTIVE: 'inactive'

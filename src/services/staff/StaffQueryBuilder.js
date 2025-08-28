@@ -4,19 +4,20 @@ const {
   USER_ATTRIBUTES, 
   CLIENT_ATTRIBUTES, 
   ROLE_ATTRIBUTES, 
-  STAFF_ATTRIBUTES 
+  STAFF_ATTRIBUTES,
+  STAFF_CONSTANTS
 } = require('../../utils/constants');
 const QueryHelpers = require('../../utils/queryHelpers');
 
 class StaffQueryBuilder {
   /**
-   * Build main staff query options
+   * Build main staff query options with enhanced search
    * @param {number} clientId - Client ID
    * @param {Object} options - Query options
    * @returns {Object} Sequelize query options
    */
   static buildStaffQuery(clientId, options) {
-    const { page, limit, search, status, orderBy, orderDirection } = options;
+    const { page, limit, search, searchField, searchType, status, orderBy, orderDirection } = options;
     const offset = (page - 1) * limit;
 
     // Build where clause
@@ -24,7 +25,7 @@ class StaffQueryBuilder {
     Object.assign(whereClause, QueryHelpers.buildStatusCondition(status));
 
     // Build search condition for included user
-    const includeWhere = QueryHelpers.buildSearchCondition(search, ['user_name', 'display_name', 'phone_number']);
+    const includeWhere = this.buildSearchCondition(search, searchField, searchType);
 
     return {
       where: whereClause,
@@ -35,6 +36,65 @@ class StaffQueryBuilder {
       order: [[orderBy, orderDirection.toUpperCase()]],
       distinct: true
     };
+  }
+
+  /**
+   * Build enhanced search condition
+   * @param {string} search - Search term
+   * @param {string} searchField - Specific field to search in
+   * @param {string} searchType - Type of search
+   * @returns {Object} Search condition
+   */
+  static buildSearchCondition(search, searchField, searchType) {
+    if (!search) return {};
+
+    if (searchField) {
+      // Search in specific field
+      const dbField = QueryHelpers.getDbFieldName(searchField, STAFF_CONSTANTS.SEARCHABLE_FIELDS);
+      if (dbField) {
+        // Handle staff table fields differently from user table fields
+        if (dbField === 'code' || dbField === 'current_active') {
+          // These are staff table fields, will be handled in main where clause
+          return {};
+        }
+        // User table fields
+        return QueryHelpers.buildAdvancedSearchCondition(search, [dbField], searchType);
+      }
+    } else {
+      // Search across all text searchable fields in User table
+      const userTextFields = STAFF_CONSTANTS.TEXT_SEARCHABLE_FIELDS.filter(field => 
+        ['display_name', 'user_name', 'phone_number', 'emailid', 'gender', 'religion', 
+         'education', 'skills_and_proficiency', 'language_spoken', 'skill_type', 'type'].includes(field)
+      );
+      return QueryHelpers.buildAdvancedSearchCondition(search, userTextFields, searchType);
+    }
+
+    return {};
+  }
+
+  /**
+   * Build staff table search condition
+   * @param {string} search - Search term
+   * @param {string} searchField - Specific field to search in
+   * @param {string} searchType - Type of search
+   * @returns {Object} Staff table search condition
+   */
+  static buildStaffTableSearchCondition(search, searchField, searchType) {
+    if (!search || !searchField) return {};
+
+    const dbField = QueryHelpers.getDbFieldName(searchField, STAFF_CONSTANTS.SEARCHABLE_FIELDS);
+    
+    if (dbField === 'code') {
+      return QueryHelpers.buildAdvancedSearchCondition(search, ['code'], searchType);
+    }
+    
+    if (dbField === 'current_active' && searchField === 'status') {
+      // Handle status search
+      const statusValue = search.toLowerCase() === 'active';
+      return { current_active: statusValue };
+    }
+
+    return {};
   }
 
   /**

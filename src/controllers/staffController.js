@@ -1,12 +1,12 @@
 // src/controllers/staffController.js
 const staffService = require('../services/staff/StaffService');
+const StaffValidator = require('../services/staff/StaffValidator');
 const { successResponse, errorResponse } = require('../utils/response');
 const logger = require('../utils/logger');
-const { STAFF_CONSTANTS } = require('../utils/constants');
 
 class StaffController {
   /**
-   * Get all staff members for a specific client
+   * Get all staff members for a specific client with advanced search
    * GET /api/v1/staffs/client/:clientId
    */
   async getStaffByClient(req, res) {
@@ -24,7 +24,9 @@ class StaffController {
       logger.info(`Retrieved ${result.staffs.length} staff records for client ${clientId}`, {
         clientId: parseInt(clientId),
         page: result.pagination.page,
-        total: result.pagination.total
+        total: result.pagination.total,
+        searchField: queryOptions.searchField || 'all',
+        searchTerm: queryOptions.search || null
       });
       
       return successResponse(
@@ -38,6 +40,7 @@ class StaffController {
       logger.error(`Error in getStaffByClient for client ${req.params.clientId}:`, {
         error: error.message,
         clientId: req.params.clientId,
+        queryParams: req.query,
         stack: error.stack
       });
 
@@ -56,6 +59,29 @@ class StaffController {
         500,
         process.env.NODE_ENV === 'development' ? error.message : null
       );
+    }
+  }
+
+  /**
+   * Get available search fields
+   * GET /api/v1/staffs/search-fields
+   */
+  async getSearchFields(req, res) {
+    try {
+      const searchFields = StaffValidator.getSearchableFields();
+      
+      return successResponse(
+        res,
+        'Search fields retrieved successfully',
+        {
+          searchFields,
+          searchTypes: ['like', 'exact', 'starts_with', 'ends_with']
+        },
+        200
+      );
+    } catch (error) {
+      logger.error('Error in getSearchFields:', error);
+      return errorResponse(res, 'Failed to retrieve search fields', 500);
     }
   }
 
@@ -100,43 +126,6 @@ class StaffController {
       return errorResponse(
         res,
         'Failed to retrieve staff details',
-        500,
-        process.env.NODE_ENV === 'development' ? error.message : null
-      );
-    }
-  }
-
-  /**
-   * Get staff statistics for a client
-   * GET /api/v1/staffs/client/:clientId/statistics
-   */
-  async getStaffStatistics(req, res) {
-    try {
-      const { clientId } = req.params;
-
-      if (!clientId || isNaN(clientId)) {
-        return errorResponse(res, 'Invalid client ID. Must be a valid number.', 400);
-      }
-
-      const statistics = await staffService.getStaffStatistics(parseInt(clientId));
-      
-      return successResponse(
-        res,
-        'Staff statistics retrieved successfully',
-        { statistics },
-        200
-      );
-
-    } catch (error) {
-      logger.error(`Error in getStaffStatistics for client ${req.params.clientId}:`, error);
-
-      if (error.message.includes('Client not found')) {
-        return errorResponse(res, 'Client not found', 404);
-      }
-
-      return errorResponse(
-        res,
-        'Failed to retrieve staff statistics',
         500,
         process.env.NODE_ENV === 'development' ? error.message : null
       );

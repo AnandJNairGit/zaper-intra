@@ -13,18 +13,19 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { Table } from '../ui/Table';
+import AdvancedSearch from '../ui/AdvancedSearch';
 import useClientStaff from '../../hooks/useClientStaff';
 
 const ClientStaffTable = ({ clientId, className = '' }) => {
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchParams, setSearchParams] = useState({});
   const [currentPage, setCurrentPage] = useState(1);
   const [pageLimit] = useState(10);
 
   const queryParams = useMemo(() => ({
     page: currentPage,
     limit: pageLimit,
-    ...(searchTerm && { search: searchTerm })
-  }), [currentPage, pageLimit, searchTerm]);
+    ...searchParams
+  }), [currentPage, pageLimit, searchParams]);
 
   const { staffs, pagination, summary, loading, error, refetch } = useClientStaff(clientId, queryParams);
 
@@ -456,13 +457,13 @@ const ClientStaffTable = ({ clientId, className = '' }) => {
     }
   ];
 
-  const handleSearch = (searchValue) => {
-    setSearchTerm(searchValue);
+  const handleSearch = (newSearchParams) => {
+    setSearchParams(newSearchParams);
     setCurrentPage(1);
     refetch({
       page: 1,
       limit: pageLimit,
-      ...(searchValue && { search: searchValue })
+      ...newSearchParams
     });
   };
 
@@ -480,8 +481,25 @@ const ClientStaffTable = ({ clientId, className = '' }) => {
       <Users className="w-16 h-16 mx-auto mb-4 text-gray-300" />
       <p className="text-lg font-medium text-gray-900">No staff members found</p>
       <p className="text-sm text-gray-500 mt-1">
-        {searchTerm ? 'Try adjusting your search terms' : 'No staff members registered for this client'}
+        {searchParams.search ? 'Try adjusting your search terms' : 'No staff members registered for this client'}
       </p>
+    </div>
+  );
+
+  // Custom search component with pagination info
+  const customSearchComponent = (
+    <div className="space-y-4">
+      <AdvancedSearch 
+        onSearch={handleSearch}
+        placeholder="Search staff by any field..."
+      />
+      {pagination && (
+        <div className="flex justify-end">
+          <div className="text-sm text-gray-500">
+            Showing {staffs.length} of {pagination.total} staff members
+          </div>
+        </div>
+      )}
     </div>
   );
 
@@ -494,15 +512,13 @@ const ClientStaffTable = ({ clientId, className = '' }) => {
         error={error}
         pagination={pagination}
         onPageChange={handlePageChange}
-        onSearch={handleSearch}
-        searchValue={searchTerm}
-        searchPlaceholder="Search staff by name, code, designation, or any field..."
         emptyState={emptyState}
         rowClickable={false}
         sortable={false}
         showSearch={true}
         showPagination={true}
         horizontalScroll={true}
+        customSearchComponent={customSearchComponent}
       />
     </div>
   );
