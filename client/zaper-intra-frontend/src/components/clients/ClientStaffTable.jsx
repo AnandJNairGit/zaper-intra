@@ -14,11 +14,15 @@ import {
   Home,
   AlertTriangle,
   Search,
-  Filter
+  Filter,
+  MoreHorizontal,
+  X,
+  CheckSquare
 } from 'lucide-react';
 import { Table } from '../ui/Table';
 import useClientStaff from '../../hooks/useClientStaff';
 import useSearchFields from '../../hooks/useSearchFields';
+import useFilterOptions from '../../hooks/useFilterOptions';
 
 const ClientStaffTable = ({ clientId, className = '' }) => {
   // Search-related state
@@ -27,12 +31,18 @@ const ClientStaffTable = ({ clientId, className = '' }) => {
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [searchType, setSearchType] = useState('like');
   
+  // Filter-related state
+  const [selectedCombinedFilter, setSelectedCombinedFilter] = useState(null);
+  const [selectedOtFilter, setSelectedOtFilter] = useState(null);
+  const [selectedFaceFilter, setSelectedFaceFilter] = useState(null);
+  
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [pageLimit] = useState(10);
 
-  // Fetch search fields configuration
+  // Fetch search fields and filter options
   const { searchFields, searchTypes, loading: fieldsLoading } = useSearchFields();
+  const { filterOptions, loading: filtersLoading } = useFilterOptions();
 
   // Create stable debounced function
   const debouncedSetSearch = useMemo(
@@ -59,12 +69,11 @@ const ClientStaffTable = ({ clientId, className = '' }) => {
       limit: pageLimit
     };
 
-    // Only add search params if they have values
+    // Search parameters
     if (debouncedSearchTerm.trim()) {
       params.search = debouncedSearchTerm.trim();
     }
     
-    // Use alias instead of field for searchField
     if (selectedField?.value) {
       params.searchField = selectedField.value;
     }
@@ -73,22 +82,35 @@ const ClientStaffTable = ({ clientId, className = '' }) => {
       params.searchType = searchType;
     }
 
-    console.log('Query params being sent:', params); // Debug log
+    // Filter parameters
+    if (selectedCombinedFilter?.value) {
+      params.combinedFilter = selectedCombinedFilter.value;
+    }
+    
+    if (selectedOtFilter?.value) {
+      params.otFilter = selectedOtFilter.value;
+    }
+    
+    if (selectedFaceFilter?.value) {
+      params.faceFilter = selectedFaceFilter.value;
+    }
+
+    console.log('Query params being sent:', params);
 
     return params;
-  }, [currentPage, pageLimit, debouncedSearchTerm, selectedField, searchType]);
+  }, [currentPage, pageLimit, debouncedSearchTerm, selectedField, searchType, selectedCombinedFilter, selectedOtFilter, selectedFaceFilter]);
 
   // Fetch staff data
   const { staffs, pagination, summary, loading, error, refetch } = useClientStaff(clientId, queryParams);
 
-  // Use alias for field options instead of internal field names
+  // Prepare search field options
   const fieldOptions = useMemo(() => {
     if (!searchFields.length) return [];
     
     return [
       { value: null, label: 'All Fields', icon: Search },
       ...searchFields.map(field => ({
-        value: field.alias, // Use alias instead of field.field
+        value: field.alias,
         label: field.alias.charAt(0).toUpperCase() + field.alias.slice(1),
         type: field.type,
         internalField: field.field
@@ -96,7 +118,7 @@ const ClientStaffTable = ({ clientId, className = '' }) => {
     ];
   }, [searchFields]);
 
-  // Prepare options for search type selector
+  // Prepare search type options
   const typeOptions = useMemo(() => {
     return searchTypes.map(type => ({
       value: type,
@@ -104,38 +126,98 @@ const ClientStaffTable = ({ clientId, className = '' }) => {
     }));
   }, [searchTypes]);
 
-  // Search input handler
+  // Prepare combined filter options for Select
+  const combinedFilterSelectOptions = useMemo(() => {
+    return filterOptions.combinedFilters.map(filter => ({
+      value: filter.value,
+      label: filter.label,
+      icon: filter.icon
+    }));
+  }, [filterOptions.combinedFilters]);
+
+  // Prepare OT filter options for Select
+  const otFilterSelectOptions = useMemo(() => {
+    return filterOptions.otFilters.map(filter => ({
+      value: filter.value,
+      label: filter.label,
+      icon: filter.icon
+    }));
+  }, [filterOptions.otFilters]);
+
+  // Prepare Face filter options for Select
+  const faceFilterSelectOptions = useMemo(() => {
+    return filterOptions.faceFilters.map(filter => ({
+      value: filter.value,
+      label: filter.label,
+      icon: filter.icon
+    }));
+  }, [filterOptions.faceFilters]);
+
+  // Event handlers
   const handleSearchChange = useCallback((e) => {
     const value = e.target.value;
     setSearchTerm(value);
   }, []);
 
-  // Field selection handler
   const handleFieldChange = useCallback((option) => {
     setSelectedField(option);
     setCurrentPage(1);
   }, []);
 
-  // Search type handler
   const handleSearchTypeChange = useCallback((e) => {
     setSearchType(e.target.value);
     setCurrentPage(1);
   }, []);
 
-  // Pagination handler
+  const handleCombinedFilterChange = useCallback((option) => {
+    setSelectedCombinedFilter(option);
+    setCurrentPage(1);
+    // Clear individual filters when combined filter is selected
+    if (option) {
+      setSelectedOtFilter(null);
+      setSelectedFaceFilter(null);
+    }
+  }, []);
+
+  const handleOtFilterChange = useCallback((option) => {
+    setSelectedOtFilter(option);
+    setCurrentPage(1);
+    // Clear combined filter when individual filter is selected
+    if (option) {
+      setSelectedCombinedFilter(null);
+    }
+  }, []);
+
+  const handleFaceFilterChange = useCallback((option) => {
+    setSelectedFaceFilter(option);
+    setCurrentPage(1);
+    // Clear combined filter when individual filter is selected
+    if (option) {
+      setSelectedCombinedFilter(null);
+    }
+  }, []);
+
   const handlePageChange = useCallback((newPage) => {
     setCurrentPage(newPage);
   }, []);
 
-  // Clear all filters
-  const handleClearFilters = useCallback(() => {
+  const handleClearAllFilters = useCallback(() => {
     setSelectedField(null);
     setSearchTerm('');
     setDebouncedSearchTerm('');
     setSearchType('like');
+    setSelectedCombinedFilter(null);
+    setSelectedOtFilter(null);
+    setSelectedFaceFilter(null);
     setCurrentPage(1);
     debouncedSetSearch.cancel();
   }, [debouncedSetSearch]);
+
+  // Check if any filters are active
+  const hasActiveFilters = useMemo(() => {
+    return debouncedSearchTerm || selectedField || searchType !== 'like' || 
+           selectedCombinedFilter || selectedOtFilter || selectedFaceFilter;
+  }, [debouncedSearchTerm, selectedField, searchType, selectedCombinedFilter, selectedOtFilter, selectedFaceFilter]);
 
   // Complete table columns with ALL original fields
   const columns = useMemo(() => [
@@ -571,12 +653,12 @@ const ClientStaffTable = ({ clientId, className = '' }) => {
       <Users className="w-16 h-16 mx-auto mb-4 text-gray-300" />
       <p className="text-lg font-medium text-gray-900">No staff members found</p>
       <p className="text-sm text-gray-500 mt-1">
-        {debouncedSearchTerm ? 'Try adjusting your search terms' : 'No staff members registered for this client'}
+        {hasActiveFilters ? 'Try adjusting your search terms or filters' : 'No staff members registered for this client'}
       </p>
     </div>
-  ), [debouncedSearchTerm]);
+  ), [hasActiveFilters]);
 
-  if (fieldsLoading) {
+  if (fieldsLoading || filtersLoading) {
     return (
       <div className="flex items-center justify-center py-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
@@ -586,13 +668,14 @@ const ClientStaffTable = ({ clientId, className = '' }) => {
 
   return (
     <div className={`space-y-6 ${className}`}>
-      {/* Advanced Search Controls */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-        <div className="flex items-center space-x-4">
+      {/* Enhanced Search and Filter Controls */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        {/* Search Controls Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
           {/* Field Selector */}
-          <div className="w-64">
+          <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              <Filter className="w-4 h-4 inline mr-1" />
+              <Search className="w-4 h-4 inline mr-1" />
               Search Field
             </label>
             <Select
@@ -617,9 +700,8 @@ const ClientStaffTable = ({ clientId, className = '' }) => {
           </div>
 
           {/* Search Input */}
-          <div className="flex-1">
+          <div className="lg:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              <Search className="w-4 h-4 inline mr-1" />
               Search Term
             </label>
             <input
@@ -632,7 +714,7 @@ const ClientStaffTable = ({ clientId, className = '' }) => {
           </div>
 
           {/* Search Type */}
-          <div className="w-48">
+          <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Search Type
             </label>
@@ -648,39 +730,154 @@ const ClientStaffTable = ({ clientId, className = '' }) => {
               ))}
             </select>
           </div>
+        </div>
 
-          {/* Clear Filters */}
+        {/* Filter Controls Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+          {/* Combined Filter */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              <Filter className="w-4 h-4 inline mr-1" />
+              Combined Filter
+            </label>
+            <Select
+              options={combinedFilterSelectOptions}
+              value={selectedCombinedFilter}
+              onChange={handleCombinedFilterChange}
+              placeholder="Select combined filter"
+              isClearable
+              isLoading={filtersLoading}
+              className="text-sm"
+              styles={{
+                control: (provided) => ({
+                  ...provided,
+                  minHeight: '38px',
+                  border: '1px solid #d1d5db',
+                  '&:hover': {
+                    border: '1px solid #6366f1'
+                  }
+                })
+              }}
+            />
+          </div>
+
+          {/* OT Filter */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              <Clock className="w-4 h-4 inline mr-1" />
+              OT Filter
+            </label>
+            <Select
+              options={otFilterSelectOptions}
+              value={selectedOtFilter}
+              onChange={handleOtFilterChange}
+              placeholder="Select OT filter"
+              isClearable
+              isLoading={filtersLoading}
+              isDisabled={selectedCombinedFilter !== null}
+              className="text-sm"
+              styles={{
+                control: (provided, state) => ({
+                  ...provided,
+                  minHeight: '38px',
+                  border: '1px solid #d1d5db',
+                  backgroundColor: state.isDisabled ? '#f9fafb' : 'white',
+                  '&:hover': {
+                    border: state.isDisabled ? '1px solid #d1d5db' : '1px solid #6366f1'
+                  }
+                })
+              }}
+            />
+          </div>
+
+          {/* Face Filter */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              <Eye className="w-4 h-4 inline mr-1" />
+              Face Filter
+            </label>
+            <Select
+              options={faceFilterSelectOptions}
+              value={selectedFaceFilter}
+              onChange={handleFaceFilterChange}
+              placeholder="Select face filter"
+              isClearable
+              isLoading={filtersLoading}
+              isDisabled={selectedCombinedFilter !== null}
+              className="text-sm"
+              styles={{
+                control: (provided, state) => ({
+                  ...provided,
+                  minHeight: '38px',
+                  border: '1px solid #d1d5db',
+                  backgroundColor: state.isDisabled ? '#f9fafb' : 'white',
+                  '&:hover': {
+                    border: state.isDisabled ? '1px solid #d1d5db' : '1px solid #6366f1'
+                  }
+                })
+              }}
+            />
+          </div>
+
+          {/* Clear All Button */}
           <div className="pt-7">
             <button
-              onClick={handleClearFilters}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
+              onClick={handleClearAllFilters}
+              className="w-full px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors flex items-center justify-center"
             >
-              Clear
+              <X className="w-4 h-4 mr-2" />
+              Clear All
             </button>
           </div>
         </div>
 
-        {/* Search Summary */}
-        {(debouncedSearchTerm || selectedField) && (
-          <div className="mt-4 p-3 bg-indigo-50 rounded-md">
-            <p className="text-sm text-indigo-700">
-              <span className="font-medium">Active filters:</span>
-              {selectedField && (
-                <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                  Field: {selectedField.label}
-                </span>
-              )}
-              {debouncedSearchTerm && (
-                <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                  Search: "{debouncedSearchTerm}"
-                </span>
-              )}
-              {searchType !== 'like' && (
-                <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                  Type: {searchType.replace('_', ' ')}
-                </span>
-              )}
-            </p>
+        {/* Active Filters Summary */}
+        {hasActiveFilters && (
+          <div className="mt-6 p-4 bg-indigo-50 rounded-lg">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm font-medium text-indigo-900 mb-2">Active Filters:</p>
+                <div className="flex flex-wrap gap-2">
+                  {selectedField && (
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                      Field: {selectedField.label}
+                    </span>
+                  )}
+                  {debouncedSearchTerm && (
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                      Search: "{debouncedSearchTerm}"
+                    </span>
+                  )}
+                  {searchType !== 'like' && (
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                      Type: {searchType.replace('_', ' ')}
+                    </span>
+                  )}
+                  {selectedCombinedFilter && (
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                      Combined: {selectedCombinedFilter.label}
+                    </span>
+                  )}
+                  {selectedOtFilter && (
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      OT: {selectedOtFilter.label}
+                    </span>
+                  )}
+                  {selectedFaceFilter && (
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      Face: {selectedFaceFilter.label}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={handleClearAllFilters}
+                className="flex items-center text-sm text-indigo-700 hover:text-indigo-900 transition-colors"
+              >
+                <X className="w-4 h-4 mr-1" />
+                Clear
+              </button>
+            </div>
           </div>
         )}
       </div>

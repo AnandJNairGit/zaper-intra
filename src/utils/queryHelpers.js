@@ -47,6 +47,119 @@ class QueryHelpers {
   }
 
   /**
+   * NEW: Build combinational filter conditions for OT and Face Registration
+   * @param {string} otFilter - Overtime filter: 'enabled', 'disabled', 'all'
+   * @param {string} faceFilter - Face registration filter: 'registered', 'not_registered', 'all'
+   * @param {string} combinedFilter - Predefined combined filter
+   * @returns {Object} Complex filter conditions for different query parts
+   */
+  static buildCombinationalFilterConditions(otFilter, faceFilter, combinedFilter) {
+    // Handle predefined combined filters first
+    if (combinedFilter && combinedFilter !== 'all') {
+      return this.buildPredefinedCombinedFilter(combinedFilter);
+    }
+
+    // Build individual filters
+    const conditions = {
+      overtimeCondition: this.buildOvertimeCondition(otFilter),
+      faceCondition: this.buildFaceRegistrationCondition(faceFilter),
+      requiresComplexQuery: otFilter !== 'all' || faceFilter !== 'all'
+    };
+
+    return conditions;
+  }
+
+  /**
+   * Build predefined combined filter conditions
+   * @param {string} combinedFilter - Predefined combined filter type
+   * @returns {Object} Filter conditions
+   */
+  static buildPredefinedCombinedFilter(combinedFilter) {
+    const filterMap = {
+      'ot_with_face': {
+        overtimeCondition: this.buildOvertimeCondition('enabled'),
+        faceCondition: this.buildFaceRegistrationCondition('registered'),
+        requiresComplexQuery: true
+      },
+      'ot_without_face': {
+        overtimeCondition: this.buildOvertimeCondition('enabled'),
+        faceCondition: this.buildFaceRegistrationCondition('not_registered'),
+        requiresComplexQuery: true
+      },
+      'non_ot_with_face': {
+        overtimeCondition: this.buildOvertimeCondition('disabled'),
+        faceCondition: this.buildFaceRegistrationCondition('registered'),
+        requiresComplexQuery: true
+      },
+      'non_ot_without_face': {
+        overtimeCondition: this.buildOvertimeCondition('disabled'),
+        faceCondition: this.buildFaceRegistrationCondition('not_registered'),
+        requiresComplexQuery: true
+      },
+      'all_ot': {
+        overtimeCondition: this.buildOvertimeCondition('enabled'),
+        faceCondition: this.buildFaceRegistrationCondition('all'),
+        requiresComplexQuery: true
+      },
+      'all_non_ot': {
+        overtimeCondition: this.buildOvertimeCondition('disabled'),
+        faceCondition: this.buildFaceRegistrationCondition('all'),
+        requiresComplexQuery: true
+      },
+      'all_with_face': {
+        overtimeCondition: this.buildOvertimeCondition('all'),
+        faceCondition: this.buildFaceRegistrationCondition('registered'),
+        requiresComplexQuery: true
+      },
+      'all_without_face': {
+        overtimeCondition: this.buildOvertimeCondition('all'),
+        faceCondition: this.buildFaceRegistrationCondition('not_registered'),
+        requiresComplexQuery: true
+      }
+    };
+
+    return filterMap[combinedFilter] || {
+      overtimeCondition: null,
+      faceCondition: null,
+      requiresComplexQuery: false
+    };
+  }
+
+  /**
+   * Build overtime condition
+   * @param {string} otFilter - Overtime filter
+   * @returns {string|null} SQL condition for overtime
+   */
+  static buildOvertimeCondition(otFilter) {
+    switch (otFilter) {
+      case 'enabled':
+        return '(cr.use_overtime = true OR us.use_overtime = true)';
+      case 'disabled':
+        return '(cr.use_overtime IS NULL OR cr.use_overtime = false) AND (us.use_overtime IS NULL OR us.use_overtime = false)';
+      case 'all':
+      default:
+        return null;
+    }
+  }
+
+  /**
+   * Build face registration condition
+   * @param {string} faceFilter - Face registration filter
+   * @returns {string|null} SQL condition for face registration
+   */
+  static buildFaceRegistrationCondition(faceFilter) {
+    switch (faceFilter) {
+      case 'registered':
+        return 'up.photo_id IS NOT NULL';
+      case 'not_registered':
+        return 'up.photo_id IS NULL';
+      case 'all':
+      default:
+        return null;
+    }
+  }
+
+  /**
    * Build order condition
    * @param {string} orderBy - Field to order by
    * @param {string} direction - Order direction (ASC/DESC)

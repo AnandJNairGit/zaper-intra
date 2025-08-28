@@ -13,12 +13,22 @@ const router = express.Router();
 router.get('/search-fields', staffController.getSearchFields);
 
 /**
+ * NEW: @route   GET /api/v1/staffs/filter-options
+ * @desc    Get available combinational filter options
+ * @access  Public (internal use)
+ * @returns Available OT, face, and combined filter options
+ */
+router.get('/filter-options', staffController.getFilterOptions);
+
+/**
  * @route   GET /api/v1/staffs/client/:clientId
- * @desc    Get all staff members for a specific client with advanced search
+ * @desc    Get all staff members for a specific client with advanced search and combinational filters
  * @access  Public (internal use)
  * @param   clientId - Client ID
  * @query   page, limit, search, searchField, searchType, status, orderBy, orderDirection
- * @example GET /api/v1/staffs/client/1?search=john&searchField=name&searchType=like
+ * @query   otFilter, faceFilter, combinedFilter (NEW combinational filters)
+ * @example GET /api/v1/staffs/client/1?combinedFilter=ot_with_face
+ * @example GET /api/v1/staffs/client/1?otFilter=enabled&faceFilter=registered
  */
 router.get('/client/:clientId', staffController.getStaffByClient);
 

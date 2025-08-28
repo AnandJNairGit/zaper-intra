@@ -11,12 +11,38 @@ const QueryHelpers = require('../../utils/queryHelpers');
 
 class StaffQueryBuilder {
   /**
-   * Build main staff query options with enhanced search
+   * Build main staff query options with enhanced search and combinational filters
    * @param {number} clientId - Client ID
    * @param {Object} options - Query options
    * @returns {Object} Sequelize query options
    */
   static buildStaffQuery(clientId, options) {
+    const { 
+      page, limit, search, searchField, searchType, status, orderBy, orderDirection,
+      otFilter, faceFilter, combinedFilter 
+    } = options;
+    
+    const offset = (page - 1) * limit;
+
+    // Check if we need complex combinational filtering
+    const filterConditions = QueryHelpers.buildCombinationalFilterConditions(
+      otFilter, faceFilter, combinedFilter
+    );
+
+    if (filterConditions.requiresComplexQuery) {
+      return this.buildComplexStaffQuery(clientId, options, filterConditions);
+    } else {
+      return this.buildSimpleStaffQuery(clientId, options);
+    }
+  }
+
+  /**
+   * Build simple staff query for basic filtering (no combinational filters)
+   * @param {number} clientId - Client ID
+   * @param {Object} options - Query options
+   * @returns {Object} Sequelize query options
+   */
+  static buildSimpleStaffQuery(clientId, options) {
     const { page, limit, search, searchField, searchType, status, orderBy, orderDirection } = options;
     const offset = (page - 1) * limit;
 
@@ -39,29 +65,215 @@ class StaffQueryBuilder {
   }
 
   /**
-   * Build enhanced search condition
-   * @param {string} search - Search term
-   * @param {string} searchField - Specific field to search in
-   * @param {string} searchType - Type of search
-   * @returns {Object} Search condition
+   * FIXED: Build complex staff query with combinational filters using raw SQL
+   * @param {number} clientId - Client ID
+   * @param {Object} options - Query options
+   * @param {Object} filterConditions - Filter conditions
+   * @returns {Object} Raw SQL query options
    */
+  static buildComplexStaffQuery(clientId, options, filterConditions) {
+    const { page, limit, search, searchField, searchType, status, orderBy, orderDirection } = options;
+    const offset = (page - 1) * limit;
+
+    // Build search condition
+    let searchCondition = '';
+    if (search) {
+      if (searchField) {
+        const dbField = QueryHelpers.getDbFieldName(searchField, STAFF_CONSTANTS.SEARCHABLE_FIELDS);
+        if (dbField && ['display_name', 'user_name', 'phone_number', 'emailid'].includes(dbField)) {
+          switch (searchType) {
+            case 'exact':
+              searchCondition = `AND u.${dbField} = :search`;
+              break;
+            case 'starts_with':
+              searchCondition = `AND u.${dbField} ILIKE :searchStart`;
+              break;
+            case 'ends_with':
+              searchCondition = `AND u.${dbField} ILIKE :searchEnd`;
+              break;
+            default:
+              searchCondition = `AND u.${dbField} ILIKE :searchLike`;
+              break;
+          }
+        }
+      } else {
+        searchCondition = `AND (
+          u.display_name ILIKE :searchLike OR 
+          u.user_name ILIKE :searchLike OR 
+          u.phone_number ILIKE :searchLike OR 
+          u.emailid ILIKE :searchLike
+        )`;
+      }
+    }
+
+    // Build status condition
+    let statusCondition = '';
+    if (status) {
+      statusCondition = `AND cu.current_active = :statusValue`;
+    }
+
+    // Build combinational filter conditions
+    let combinationalCondition = '';
+    const conditions = [];
+    
+    if (filterConditions.overtimeCondition) {
+      conditions.push(filterConditions.overtimeCondition);
+    }
+    
+    if (filterConditions.faceCondition) {
+      conditions.push(filterConditions.faceCondition);
+    }
+    
+    if (conditions.length > 0) {
+      combinationalCondition = `AND (${conditions.join(' AND ')})`;
+    }
+
+    // Build order clause
+    let orderClause = '';
+    switch (orderBy) {
+      case 'name':
+        orderClause = `ORDER BY u.display_name ${orderDirection}`;
+        break;
+      case 'joining_date':
+        orderClause = `ORDER BY cu.joining_date ${orderDirection}`;
+        break;
+      case 'status':
+        orderClause = `ORDER BY cu.current_active ${orderDirection}`;
+        break;
+      case 'code':
+        orderClause = `ORDER BY cu.code ${orderDirection}`;
+        break;
+      default:
+        orderClause = `ORDER BY cu.created_at ${orderDirection}`;
+        break;
+    }
+
+    // FIXED: Cast JSON columns to text and avoid DISTINCT
+    const rawQuery = `
+      SELECT
+        cu.staff_id,
+        cu.client_id,
+        cu.user_id,
+        cu.role_id,
+        cu.joining_date,
+        cu.current_active,
+        cu.code,
+        cu.vendor_id,
+        cu.permissions::text as permissions_text,
+        cu.project_permissions::text as project_permissions_text,
+        cu.created_at,
+        
+        -- User details
+        u.user_id as "user.user_id",
+        u.user_name as "user.user_name",
+        u.display_name as "user.display_name",
+        u.phone_number as "user.phone_number",
+        u.gender as "user.gender",
+        u.religion as "user.religion",
+        u.skills_and_proficiency as "user.skills_and_proficiency",
+        u.language_spoken as "user.language_spoken",
+        u.education as "user.education",
+        u.date_of_birth as "user.date_of_birth",
+        u.description as "user.description",
+        u.emailid as "user.emailid",
+        u.profile_image as "user.profile_image",
+        u.skill_type as "user.skill_type",
+        u.zaper_skills as "user.zaper_skills",
+        u.type as "user.type",
+        
+        -- Client details
+        c.client_id as "client.client_id",
+        c.client_name as "client.client_name",
+        c.region as "client.region",
+        c.currency as "client.currency",
+        
+        -- Role details
+        cr.role_id as "role.role_id",
+        cr.role_name as "role.role_name",
+        cr.use_overtime as "role.use_overtime",
+        cr.ot_above_hour as "role.ot_above_hour",
+        cr.regular_ot as "role.regular_ot",
+        cr.holiday_pay_rate as "role.holiday_pay_rate",
+        cr.sick_leave_eligibility as "role.sick_leave_eligibility",
+        cr.annual_leave_eligibility as "role.annual_leave_eligibility",
+        cr.insurance_eligibility as "role.insurance_eligibility",
+        cr.air_ticket_eligibility as "role.air_ticket_eligibility"
+        
+      FROM client_users cu
+      INNER JOIN users u ON u.user_id = cu.user_id
+      INNER JOIN clients c ON c.client_id = cu.client_id
+      LEFT JOIN client_roles cr ON cr.role_id = cu.role_id
+      LEFT JOIN user_salary us ON us.user_id = cu.user_id
+      LEFT JOIN user_photos up ON up.user_id = cu.user_id
+      
+      WHERE cu.client_id = :clientId
+      ${statusCondition}
+      ${searchCondition}
+      ${combinationalCondition}
+      
+      ${orderClause}
+      LIMIT :limit OFFSET :offset
+    `;
+
+    // FIXED: Simplified count query
+    const countQuery = `
+      SELECT COUNT(DISTINCT cu.staff_id) as count
+      FROM client_users cu
+      INNER JOIN users u ON u.user_id = cu.user_id
+      LEFT JOIN client_roles cr ON cr.role_id = cu.role_id
+      LEFT JOIN user_salary us ON us.user_id = cu.user_id
+      LEFT JOIN user_photos up ON up.user_id = cu.user_id
+      
+      WHERE cu.client_id = :clientId
+      ${statusCondition}
+      ${searchCondition}
+      ${combinationalCondition}
+    `;
+
+    // Prepare replacements
+    const replacements = {
+      clientId: parseInt(clientId),
+      limit: parseInt(limit),
+      offset: parseInt(offset)
+    };
+
+    if (status) {
+      replacements.statusValue = status === 'active';
+    }
+
+    if (search) {
+      if (searchType === 'starts_with') {
+        replacements.searchStart = `${search}%`;
+      } else if (searchType === 'ends_with') {
+        replacements.searchEnd = `%${search}`;
+      } else if (searchType === 'exact') {
+        replacements.search = search;
+      } else {
+        replacements.searchLike = `%${search}%`;
+      }
+    }
+
+    return {
+      isRawQuery: true,
+      query: rawQuery,
+      countQuery: countQuery,
+      replacements: replacements
+    };
+  }
+
+  // ... rest of the methods remain the same
   static buildSearchCondition(search, searchField, searchType) {
     if (!search) return {};
 
     if (searchField) {
-      // Search in specific field
       const dbField = QueryHelpers.getDbFieldName(searchField, STAFF_CONSTANTS.SEARCHABLE_FIELDS);
       if (dbField) {
-        // Handle staff table fields differently from user table fields
         if (dbField === 'code' || dbField === 'current_active') {
-          // These are staff table fields, will be handled in main where clause
           return {};
         }
-        // User table fields
         return QueryHelpers.buildAdvancedSearchCondition(search, [dbField], searchType);
       }
     } else {
-      // Search across all text searchable fields in User table
       const userTextFields = STAFF_CONSTANTS.TEXT_SEARCHABLE_FIELDS.filter(field => 
         ['display_name', 'user_name', 'phone_number', 'emailid', 'gender', 'religion', 
          'education', 'skills_and_proficiency', 'language_spoken', 'skill_type', 'type'].includes(field)
@@ -72,36 +284,6 @@ class StaffQueryBuilder {
     return {};
   }
 
-  /**
-   * Build staff table search condition
-   * @param {string} search - Search term
-   * @param {string} searchField - Specific field to search in
-   * @param {string} searchType - Type of search
-   * @returns {Object} Staff table search condition
-   */
-  static buildStaffTableSearchCondition(search, searchField, searchType) {
-    if (!search || !searchField) return {};
-
-    const dbField = QueryHelpers.getDbFieldName(searchField, STAFF_CONSTANTS.SEARCHABLE_FIELDS);
-    
-    if (dbField === 'code') {
-      return QueryHelpers.buildAdvancedSearchCondition(search, ['code'], searchType);
-    }
-    
-    if (dbField === 'current_active' && searchField === 'status') {
-      // Handle status search
-      const statusValue = search.toLowerCase() === 'active';
-      return { current_active: statusValue };
-    }
-
-    return {};
-  }
-
-  /**
-   * Build include options for associated models
-   * @param {Object} includeWhere - Where condition for user search
-   * @returns {Array} Sequelize include options
-   */
   static buildIncludeOptions(includeWhere) {
     const { User, Client, ClientRole } = require('../../models');
 
@@ -126,11 +308,6 @@ class StaffQueryBuilder {
     ];
   }
 
-  /**
-   * Build batch queries for related data
-   * @param {Array} userIds - Array of user IDs
-   * @returns {Object} Batch query options
-   */
   static buildBatchQueries(userIds) {
     const { UserPhoto, UserJobProfile, UserSalary, UserNotificationToken, ClientJobProfile } = require('../../models');
 

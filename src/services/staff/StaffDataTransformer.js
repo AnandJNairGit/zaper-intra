@@ -17,7 +17,7 @@ class StaffDataTransformer {
     } = relatedData;
 
     return rawStaffData.map(staff => {
-      const staffData = staff.get({ plain: true });
+      const staffData = staff.get ? staff.get({ plain: true }) : staff;
       const user = staffData.user || {};
       const role = staffData.role || {};
       const clientInfo = staffData.client || {};
@@ -36,7 +36,7 @@ class StaffDataTransformer {
   }
 
   /**
-   * Build comprehensive staff object including accommodation details
+   * Build comprehensive staff object including accommodation details and filter flags
    * @param {Object} staffData - Staff data
    * @param {Object} user - User data
    * @param {Object} role - Role data
@@ -50,6 +50,12 @@ class StaffDataTransformer {
    * @returns {Object} Formatted staff object
    */
   static buildStaffObject(staffData, user, role, clientInfo, photos, jobProfile, salary, tokens, accommodations, communicationDetails) {
+    // Calculate overtime eligibility
+    const isOtEligible = role.use_overtime || salary.use_overtime || false;
+    
+    // Calculate face registration status
+    const isFaceRegistered = photos.length > 0;
+
     return {
       // Basic Information
       staff_id: staffData.staff_id,
@@ -73,8 +79,15 @@ class StaffDataTransformer {
       designation: role.role_name || null,
       job_profile_name: jobProfile.jobProfile?.job_profile_name || null,
       
+      // NEW: Combinational Filter Flags
+      filter_flags: {
+        is_ot_eligible: isOtEligible,
+        is_face_registered: isFaceRegistered,
+        combinational_type: this.getCombinationalType(isOtEligible, isFaceRegistered)
+      },
+      
       // Overtime Information
-      ot_applicable: role.use_overtime || salary.use_overtime || false,
+      ot_applicable: isOtEligible,
       ot_above_hour: role.ot_above_hour || null,
       regular_ot_rate: role.regular_ot || null,
       holiday_pay_rate: role.holiday_pay_rate || null,
@@ -102,7 +115,7 @@ class StaffDataTransformer {
       profile_info: jobProfile.profileinfo || null,
       
       // Face Registration
-      is_face_registered: photos.length > 0,
+      is_face_registered: isFaceRegistered,
       total_photos: photos.length,
       face_photos_count: photos.filter(p => p.photo_type === 'face').length,
       vector_saved_photos: photos.filter(p => p.saved_to_vector).length,
@@ -119,10 +132,10 @@ class StaffDataTransformer {
       ctc: salary.ctc || null,
       salary_currency: salary.currency || null,
       
-      // Communication Details (NEW)
+      // Communication Details
       communication_details: this.formatCommunicationDetails(communicationDetails),
       
-      // Accommodation Details (NEW)
+      // Accommodation Details
       accommodation_details: this.formatAccommodationDetails(accommodations),
       
       // Additional Information
@@ -140,6 +153,20 @@ class StaffDataTransformer {
       // Metadata
       record_created_at: staffData.created_at || null
     };
+  }
+
+  /**
+   * NEW: Get combinational type based on OT and face registration status
+   * @param {boolean} isOtEligible - Is overtime eligible
+   * @param {boolean} isFaceRegistered - Is face registered
+   * @returns {string} Combinational type
+   */
+  static getCombinationalType(isOtEligible, isFaceRegistered) {
+    if (isOtEligible && isFaceRegistered) return 'ot_with_face';
+    if (isOtEligible && !isFaceRegistered) return 'ot_without_face';
+    if (!isOtEligible && isFaceRegistered) return 'non_ot_with_face';
+    if (!isOtEligible && !isFaceRegistered) return 'non_ot_without_face';
+    return 'unknown';
   }
 
   /**
@@ -208,7 +235,7 @@ class StaffDataTransformer {
   }
 
   /**
-   * Build summary statistics
+   * Build summary statistics with combinational filter counts
    * @param {Array} staffDetails - Formatted staff details
    * @param {Object} clientInfo - Client information
    * @param {number} totalCount - Total staff count
@@ -222,6 +249,19 @@ class StaffDataTransformer {
       face_registered: staffDetails.filter(s => s.is_face_registered).length,
       ot_applicable_count: staffDetails.filter(s => s.ot_applicable).length,
       staff_with_accommodation: staffDetails.filter(s => s.accommodation_details.length > 0).length,
+      
+      // NEW: Combinational filter statistics
+      combinational_stats: {
+        ot_with_face: staffDetails.filter(s => s.filter_flags.combinational_type === 'ot_with_face').length,
+        ot_without_face: staffDetails.filter(s => s.filter_flags.combinational_type === 'ot_without_face').length,
+        non_ot_with_face: staffDetails.filter(s => s.filter_flags.combinational_type === 'non_ot_with_face').length,
+        non_ot_without_face: staffDetails.filter(s => s.filter_flags.combinational_type === 'non_ot_without_face').length,
+        all_ot: staffDetails.filter(s => s.filter_flags.is_ot_eligible).length,
+        all_non_ot: staffDetails.filter(s => !s.filter_flags.is_ot_eligible).length,
+        all_with_face: staffDetails.filter(s => s.filter_flags.is_face_registered).length,
+        all_without_face: staffDetails.filter(s => !s.filter_flags.is_face_registered).length
+      },
+      
       client_info: {
         client_id: clientInfo.client_id,
         client_name: clientInfo.client_name

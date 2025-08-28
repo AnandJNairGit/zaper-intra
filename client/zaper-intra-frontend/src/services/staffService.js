@@ -29,6 +29,19 @@ export class StaffService {
   }
 
   /**
+   * Get available filter options for staff filtering
+   */
+  async getFilterOptions() {
+    try {
+      const response = await httpClient.get('/staffs/filter-options');
+      return response;
+    } catch (error) {
+      console.error('Error fetching filter options:', error);
+      throw new Error(`Failed to fetch filter options: ${error.message}`);
+    }
+  }
+
+  /**
    * Get specific staff member by ID
    */
   async getStaffById(staffId) {

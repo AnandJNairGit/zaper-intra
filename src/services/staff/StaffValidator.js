@@ -25,7 +25,7 @@ class StaffValidator {
   }
 
   /**
-   * Validate and sanitize query options with enhanced search capabilities
+   * Validate and sanitize query options with enhanced search and combinational filters
    * @param {Object} options - Query options
    * @returns {Object} Validated options
    */
@@ -38,7 +38,11 @@ class StaffValidator {
       searchType = 'like',
       status = null,
       orderBy = 'joining_date',
-      orderDirection = 'DESC'
+      orderDirection = 'DESC',
+      // NEW: Combinational filter parameters
+      otFilter = 'all',
+      faceFilter = 'all',
+      combinedFilter = null
     } = options;
 
     // Validate pagination
@@ -64,7 +68,7 @@ class StaffValidator {
       STAFF_CONSTANTS.STATUS_VALUES.INACTIVE
     ].includes(status) ? status : null;
 
-    // Validate searchField and searchType
+    // Validate search parameters
     const validSearchField = searchField && 
       Object.keys(STAFF_CONSTANTS.SEARCHABLE_FIELDS).includes(searchField) 
       ? searchField 
@@ -74,6 +78,17 @@ class StaffValidator {
       ? searchType
       : 'like';
 
+    // NEW: Validate combinational filter parameters
+    const validOtFilter = Object.values(STAFF_CONSTANTS.COMBINATIONAL_FILTERS.OT_FILTERS)
+      .includes(otFilter) ? otFilter : 'all';
+
+    const validFaceFilter = Object.values(STAFF_CONSTANTS.COMBINATIONAL_FILTERS.FACE_FILTERS)
+      .includes(faceFilter) ? faceFilter : 'all';
+
+    const validCombinedFilter = combinedFilter && 
+      Object.values(STAFF_CONSTANTS.COMBINATIONAL_FILTERS.COMBINED_FILTERS)
+      .includes(combinedFilter) ? combinedFilter : null;
+
     return {
       page: validatedPage,
       limit: validatedLimit,
@@ -82,7 +97,11 @@ class StaffValidator {
       searchType: validSearchType,
       status: validStatus,
       orderBy: validOrderBy,
-      orderDirection: validDirection
+      orderDirection: validDirection,
+      // NEW: Validated combinational filters
+      otFilter: validOtFilter,
+      faceFilter: validFaceFilter,
+      combinedFilter: validCombinedFilter
     };
   }
 
@@ -99,6 +118,42 @@ class StaffValidator {
       ) ? 'text' : 'exact'
     }));
   }
+
+  /**
+   * NEW: Get available combinational filter options
+   * @returns {Object} Available filter options
+   */
+  static getCombinationalFilterOptions() {
+    return {
+      otFilters: Object.values(STAFF_CONSTANTS.COMBINATIONAL_FILTERS.OT_FILTERS),
+      faceFilters: Object.values(STAFF_CONSTANTS.COMBINATIONAL_FILTERS.FACE_FILTERS),
+      combinedFilters: Object.values(STAFF_CONSTANTS.COMBINATIONAL_FILTERS.COMBINED_FILTERS),
+      descriptions: {
+        otFilters: {
+          enabled: 'Staff with overtime enabled',
+          disabled: 'Staff without overtime enabled',
+          all: 'All staff regardless of overtime status'
+        },
+        faceFilters: {
+          registered: 'Staff with face registered',
+          not_registered: 'Staff without face registered', 
+          all: 'All staff regardless of face registration'
+        },
+        combinedFilters: {
+          ot_with_face: 'OT enabled staff with face registered',
+          ot_without_face: 'OT enabled staff without face registered',
+          non_ot_with_face: 'Non-OT staff with face registered',
+          non_ot_without_face: 'Non-OT staff without face registered',
+          all_ot: 'All OT enabled staff',
+          all_non_ot: 'All non-OT enabled staff',
+          all_with_face: 'All staff with face registered',
+          all_without_face: 'All staff without face registered',
+          all: 'All staff (no filters)'
+        }
+      }
+    };
+  }
 }
 
 module.exports = StaffValidator;
+ 

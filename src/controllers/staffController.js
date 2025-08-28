@@ -6,7 +6,7 @@ const logger = require('../utils/logger');
 
 class StaffController {
   /**
-   * Get all staff members for a specific client with advanced search
+   * Get all staff members for a specific client with advanced search and combinational filters
    * GET /api/v1/staffs/client/:clientId
    */
   async getStaffByClient(req, res) {
@@ -26,7 +26,10 @@ class StaffController {
         page: result.pagination.page,
         total: result.pagination.total,
         searchField: queryOptions.searchField || 'all',
-        searchTerm: queryOptions.search || null
+        searchTerm: queryOptions.search || null,
+        otFilter: queryOptions.otFilter || 'all',
+        faceFilter: queryOptions.faceFilter || 'all',
+        combinedFilter: queryOptions.combinedFilter || null
       });
       
       return successResponse(
@@ -82,6 +85,26 @@ class StaffController {
     } catch (error) {
       logger.error('Error in getSearchFields:', error);
       return errorResponse(res, 'Failed to retrieve search fields', 500);
+    }
+  }
+
+  /**
+   * NEW: Get available combinational filter options
+   * GET /api/v1/staffs/filter-options
+   */
+  async getFilterOptions(req, res) {
+    try {
+      const filterOptions = StaffValidator.getCombinationalFilterOptions();
+      
+      return successResponse(
+        res,
+        'Filter options retrieved successfully',
+        filterOptions,
+        200
+      );
+    } catch (error) {
+      logger.error('Error in getFilterOptions:', error);
+      return errorResponse(res, 'Failed to retrieve filter options', 500);
     }
   }
 

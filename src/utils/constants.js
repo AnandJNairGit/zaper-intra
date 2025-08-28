@@ -32,6 +32,36 @@ const STAFF_CONSTANTS = {
   // Fields that require exact match (boolean, enum fields)
   EXACT_MATCH_FIELDS: ['current_active'],
   
+  // NEW: Combinational filter options
+  COMBINATIONAL_FILTERS: {
+    // Overtime filter options
+    OT_FILTERS: {
+      ENABLED: 'enabled',
+      DISABLED: 'disabled', 
+      ALL: 'all'
+    },
+    
+    // Face registration filter options
+    FACE_FILTERS: {
+      REGISTERED: 'registered',
+      NOT_REGISTERED: 'not_registered',
+      ALL: 'all'
+    },
+    
+    // Predefined combined filter options
+    COMBINED_FILTERS: {
+      OT_WITH_FACE: 'ot_with_face',
+      OT_WITHOUT_FACE: 'ot_without_face',
+      NON_OT_WITH_FACE: 'non_ot_with_face', 
+      NON_OT_WITHOUT_FACE: 'non_ot_without_face',
+      ALL_OT: 'all_ot',
+      ALL_NON_OT: 'all_non_ot',
+      ALL_WITH_FACE: 'all_with_face',
+      ALL_WITHOUT_FACE: 'all_without_face',
+      ALL: 'all'
+    }
+  },
+  
   DEFAULT_PAGINATION: {
     PAGE: 1,
     LIMIT: 50,
