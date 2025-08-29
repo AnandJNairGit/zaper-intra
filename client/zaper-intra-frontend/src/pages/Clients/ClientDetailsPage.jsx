@@ -370,19 +370,8 @@ const ClientDetailsPage = () => {
           </div>
         </div>
 
-        {/* Staff Table */}
+        {/* Staff Table - HEADING REMOVED */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-          <div className="p-6 border-b border-gray-200">
-            <div className="flex items-center gap-3">
-              <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-3 rounded-lg shadow-md">
-                <Users className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">Staff Members</h2>
-                <p className="text-gray-600 mt-1">Manage and view detailed information about staff members</p>
-              </div>
-            </div>
-          </div>
           <ClientStaffTable clientId={clientId} />
         </div>
       </div>

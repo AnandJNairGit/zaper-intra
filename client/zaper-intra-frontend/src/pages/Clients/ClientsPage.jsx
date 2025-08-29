@@ -115,12 +115,12 @@ const ClientsPage = () => {
   return (
     <div className="space-y-6 bg-white">
       {/* Page Header */}
-      <div className="bg-white p-6 rounded-lg">
+      {/* <div className="bg-white p-6 rounded-lg">
         <h1 className="text-3xl font-bold text-gray-900">Clients</h1>
         <p className="mt-2 text-gray-600">
           Manage and monitor your client relationships and their performance metrics.
         </p>
-      </div>
+      </div> */}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -176,7 +176,7 @@ const ClientsPage = () => {
         rowClickable={true}
         onRowClick={handleRowClick}
         sortable={false}
-        showSearch={true}
+        showSearch={false}
         showPagination={true}
       />
     </div>
