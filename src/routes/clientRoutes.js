@@ -4,30 +4,38 @@ const clientController = require('../controllers/clientController');
 
 const router = express.Router();
 
-// Debug: Check if controller methods exist
-console.log('ClientController methods:', Object.getOwnPropertyNames(clientController));
-console.log('getAllClientsSummary type:', typeof clientController.getAllClientsSummary);
-console.log('getClientSummaryById type:', typeof clientController.getClientSummaryById);
-console.log('getClientStatistics type:', typeof clientController.getClientStatistics);
-
 /**
  * @route   GET /api/v1/clients
- * @desc    Get all clients summary (lightweight)
+ * @desc    Get all clients with summary information
+ * @access  Public (internal use)
+ * @query   page, limit, search, status
  */
-router.get('/', clientController.getAllClientsSummary);
+router.get('/', clientController.getAllClients);
 
 /**
- * @route   GET /api/v1/clients/:id/statistics  
- * @desc    Get comprehensive statistics for a specific client
+ * @route   GET /api/v1/clients/:id
+ * @desc    Get single client details by ID
+ * @access  Public (internal use)
  * @param   id - Client ID
+ */
+router.get('/:id', clientController.getClientById);
+
+/**
+ * ENHANCED: @route   GET /api/v1/clients/:id/statistics
+ * @desc    Get comprehensive client statistics with OT and face registration combinations
+ * @access  Public (internal use)
+ * @param   id - Client ID
+ * @returns Enhanced statistics including all OT and face registration combinations
  */
 router.get('/:id/statistics', clientController.getClientStatistics);
 
 /**
- * @route   GET /api/v1/clients/:id
- * @desc    Get client summary by ID (lightweight)
+ * NEW: @route   GET /api/v1/clients/:id/statistics/detailed
+ * @desc    Get detailed client statistics with additional breakdowns
+ * @access  Public (internal use)
  * @param   id - Client ID
+ * @returns Detailed statistics with comprehensive breakdowns
  */
-router.get('/:id', clientController.getClientSummaryById);
+router.get('/:id/statistics/detailed', clientController.getDetailedClientStatistics);
 
 module.exports = router;

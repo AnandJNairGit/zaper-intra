@@ -1,6 +1,7 @@
 // src/services/clientService.js
 const { Client, ClientUser, ClientProject, UserPhoto, ClientRole } = require('../models');
 const { Op, fn, col, literal } = require('sequelize');
+const StaffStatisticsService = require('./staff/StaffStatisticsService');
 
 class ClientService {
   /**
@@ -133,8 +134,7 @@ class ClientService {
   }
 
   /**
-   * Get comprehensive statistics for a specific client
-   * FIXED: Improved OT logic to check both ClientRole and UserSalary for overtime settings
+   * ENHANCED: Get comprehensive statistics for a specific client with OT and face registration combinations
    */
   async getClientStatistics(clientId) {
     if (!clientId || isNaN(clientId)) {
@@ -142,111 +142,66 @@ class ClientService {
     }
 
     try {
-      const clientExists = await Client.findByPk(clientId, {
-        attributes: ['client_id', 'client_name']
-      });
+      // Get client information first
+      const clientInfo = await StaffStatisticsService.getClientInfo(clientId);
+      
+      // Get comprehensive OT and face registration statistics
+      const statistics = await StaffStatisticsService.getOtAndFaceStatistics(clientId);
 
-      if (!clientExists) {
-        throw new Error('Client not found');
-      }
-
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-      // FIXED: Enhanced SQL query with improved OT logic
-      const [statisticsResult] = await Client.sequelize.query(`
-        WITH client_stats AS (
-          SELECT 
-            c.client_id,
-            c.client_name,
-            COUNT(DISTINCT cp.project_id) AS total_projects,
-            COUNT(DISTINCT cu.staff_id) AS total_staff,
-            COUNT(DISTINCT CASE WHEN up.photo_id IS NOT NULL THEN cu.staff_id END) AS staff_with_registered_face,
-            COUNT(DISTINCT CASE WHEN up.photo_id IS NULL THEN cu.staff_id END) AS staff_without_registered_face,
-            
-            -- FIXED: Enhanced OT logic - checks both ClientRole.use_overtime AND UserSalary.use_overtime
-            COUNT(DISTINCT CASE 
-              WHEN (
-                (cr.use_overtime = true) OR 
-                (us.use_overtime = true)
-              ) AND up.photo_id IS NOT NULL 
-              THEN cu.staff_id 
-            END) AS overtime_enabled_staff_with_face,
-            
-            COUNT(DISTINCT CASE 
-              WHEN (
-                (cr.use_overtime = true) OR 
-                (us.use_overtime = true)
-              ) AND up.photo_id IS NULL 
-              THEN cu.staff_id 
-            END) AS overtime_enabled_staff_without_face,
-            
-            COUNT(DISTINCT CASE WHEN cu.joining_date >= :thirtyDaysAgo THEN cu.staff_id END) AS staff_onboarded_last_30_days,
-            COUNT(DISTINCT CASE WHEN cu.current_active = true THEN cu.staff_id END) AS active_staff,
-            COUNT(DISTINCT CASE WHEN (cu.current_active IS NULL OR cu.current_active = false) THEN cu.staff_id END) AS inactive_staff,
-            COUNT(DISTINCT CASE WHEN cp.start_date >= :thirtyDaysAgo THEN cp.project_id END) AS projects_onboarded_last_30_days,
-            COUNT(DISTINCT CASE WHEN cp.end_date >= :thirtyDaysAgo AND cp.end_date <= CURRENT_DATE THEN cp.project_id END) AS projects_ended_last_30_days
-          FROM clients c
-          LEFT JOIN client_users cu ON cu.client_id = c.client_id
-          LEFT JOIN client_projects cp ON cp.client_id = c.client_id
-          LEFT JOIN client_roles cr ON cr.role_id = cu.role_id
-          LEFT JOIN user_photos up ON up.user_id = cu.user_id
-          -- FIXED: Added LEFT JOIN to user_salary to check for overtime settings there too
-          LEFT JOIN user_salary us ON us.user_id = cu.user_id
-          WHERE c.client_id = :clientId
-          GROUP BY c.client_id, c.client_name
-        )
-        SELECT * FROM client_stats;
-      `, {
-        replacements: { 
-          clientId: parseInt(clientId), 
-          thirtyDaysAgo: thirtyDaysAgo.toISOString().split('T')[0]
-        },
-        type: Client.sequelize.QueryTypes.SELECT
-      });
-
-      if (!statisticsResult) {
-        return {
-          client_id: parseInt(clientId),
-          client_name: clientExists.client_name,
-          total_projects: 0,
-          total_staff: 0,
-          staff_with_registered_face: 0,
-          staff_without_registered_face: 0,
-          overtime_enabled_staff_with_face: 0,
-          overtime_enabled_staff_without_face: 0,
-          staff_onboarded_last_30_days: 0,
-          active_staff: 0,
-          inactive_staff: 0,
-          projects_onboarded_last_30_days: 0,
-          projects_ended_last_30_days: 0
-        };
-      }
-
+      // Combine client info with statistics
       return {
-        client_id: parseInt(statisticsResult.client_id),
-        client_name: statisticsResult.client_name,
-        total_projects: parseInt(statisticsResult.total_projects) || 0,
-        total_staff: parseInt(statisticsResult.total_staff) || 0,
-        staff_with_registered_face: parseInt(statisticsResult.staff_with_registered_face) || 0,
-        staff_without_registered_face: parseInt(statisticsResult.staff_without_registered_face) || 0,
-        overtime_enabled_staff_with_face: parseInt(statisticsResult.overtime_enabled_staff_with_face) || 0,
-        overtime_enabled_staff_without_face: parseInt(statisticsResult.overtime_enabled_staff_without_face) || 0,
-        staff_onboarded_last_30_days: parseInt(statisticsResult.staff_onboarded_last_30_days) || 0,
-        active_staff: parseInt(statisticsResult.active_staff) || 0,
-        inactive_staff: parseInt(statisticsResult.inactive_staff) || 0,
-        projects_onboarded_last_30_days: parseInt(statisticsResult.projects_onboarded_last_30_days) || 0,
-        projects_ended_last_30_days: parseInt(statisticsResult.projects_ended_last_30_days) || 0,
-        staff_face_registration_percentage: parseInt(statisticsResult.total_staff) > 0 
-          ? Math.round((parseInt(statisticsResult.staff_with_registered_face) / parseInt(statisticsResult.total_staff)) * 100)
-          : 0,
-        staff_activity_percentage: parseInt(statisticsResult.total_staff) > 0
-          ? Math.round((parseInt(statisticsResult.active_staff) / parseInt(statisticsResult.total_staff)) * 100)
-          : 0
+        ...clientInfo,
+        ...statistics
       };
 
     } catch (error) {
+      if (error.message.includes('Client not found')) {
+        throw error;
+      }
       throw new Error(`Failed to fetch client statistics: ${error.message}`);
+    }
+  }
+
+  /**
+   * NEW: Get detailed client statistics with additional breakdowns
+   */
+  async getDetailedClientStatistics(clientId) {
+    try {
+      const basicStats = await this.getClientStatistics(clientId);
+      
+      // Add additional detailed breakdowns
+      const detailedBreakdowns = await this.getAdditionalStatisticsBreakdowns(clientId);
+      
+      return {
+        ...basicStats,
+        detailed_breakdowns: detailedBreakdowns
+      };
+    } catch (error) {
+      throw new Error(`Failed to fetch detailed client statistics: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get additional statistics breakdowns (can be extended for future requirements)
+   * @param {number} clientId - Client ID
+   * @returns {Object} Additional breakdowns
+   */
+  async getAdditionalStatisticsBreakdowns(clientId) {
+    try {
+      // Placeholder for additional breakdowns like:
+      // - Department wise breakdown
+      // - Salary range breakdown
+      // - Experience level breakdown
+      // These can be implemented as needed
+      
+      return {
+        department_breakdown: [],
+        salary_range_breakdown: [],
+        experience_level_breakdown: [],
+        note: "Additional breakdowns can be implemented based on requirements"
+      };
+    } catch (error) {
+      throw new Error(`Failed to fetch additional breakdowns: ${error.message}`);
     }
   }
 }

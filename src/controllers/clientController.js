@@ -5,62 +5,41 @@ const logger = require('../utils/logger');
 
 class ClientController {
   /**
-   * Get all clients summary (lightweight)
+   * Get all clients with summary information
    * GET /api/v1/clients
    */
-  async getAllClientsSummary(req, res) {
+  async getAllClients(req, res) {
     try {
-      const {
-        page = 1,
-        limit = 50,
-        search = '',
-        status = null
-      } = req.query;
-
-      // Validate query parameters
-      if (page < 1 || limit < 1 || limit > 100) {
-        return errorResponse(res, 'Invalid pagination parameters. Page must be >= 1 and limit between 1-100', 400);
-      }
-
-      const options = {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        search: search.trim(),
-        status
-      };
-
-      const result = await clientService.getAllClientsSummary(options);
+      const queryOptions = req.query;
+      const result = await clientService.getAllClientsSummary(queryOptions);
       
-      logger.info(`Retrieved ${result.clients.length} client summaries for page ${page}`);
+      logger.info(`Retrieved ${result.clients.length} clients`, {
+        page: result.pagination.page,
+        total: result.pagination.total
+      });
       
       return successResponse(
         res,
-        'Client summaries retrieved successfully',
+        'Clients retrieved successfully',
         result,
         200
       );
-
     } catch (error) {
-      logger.error('Error in getAllClientsSummary:', error);
-      return errorResponse(
-        res,
-        'Failed to retrieve client summaries',
-        500,
-        process.env.NODE_ENV === 'development' ? error.message : null
-      );
+      logger.error('Error in getAllClients:', error);
+      return errorResponse(res, 'Failed to retrieve clients', 500);
     }
   }
 
   /**
-   * Get client summary by ID
+   * Get single client by ID
    * GET /api/v1/clients/:id
    */
-  async getClientSummaryById(req, res) {
+  async getClientById(req, res) {
     try {
       const { id } = req.params;
-      
+
       if (!id || isNaN(id)) {
-        return errorResponse(res, 'Invalid client ID', 400);
+        return errorResponse(res, 'Invalid client ID. Must be a valid number.', 400);
       }
 
       const client = await clientService.getClientSummaryById(parseInt(id));
@@ -69,42 +48,44 @@ class ClientController {
         return errorResponse(res, 'Client not found', 404);
       }
 
-      logger.info(`Retrieved client summary for ID: ${id}`);
+      logger.info(`Retrieved client details for client ID: ${id}`);
       
       return successResponse(
         res,
-        'Client summary retrieved successfully',
+        'Client details retrieved successfully',
         { client },
         200
       );
-
     } catch (error) {
-      logger.error(`Error in getClientSummaryById for ID ${req.params.id}:`, error);
-      return errorResponse(
-        res,
-        'Failed to retrieve client summary',
-        500,
-        process.env.NODE_ENV === 'development' ? error.message : null
-      );
+      logger.error(`Error in getClientById for client ${req.params.id}:`, error);
+      return errorResponse(res, 'Failed to retrieve client details', 500);
     }
   }
 
   /**
-   * Get comprehensive statistics for a specific client
+   * ENHANCED: Get client statistics with OT and face registration combinations
    * GET /api/v1/clients/:id/statistics
    */
   async getClientStatistics(req, res) {
     try {
       const { id } = req.params;
-      
+
       if (!id || isNaN(id)) {
         return errorResponse(res, 'Invalid client ID. Must be a valid number.', 400);
       }
 
-      const clientId = parseInt(id);
-      const statistics = await clientService.getClientStatistics(clientId);
+      const statistics = await clientService.getClientStatistics(parseInt(id));
       
-      logger.info(`Retrieved statistics for client ID: ${clientId}`);
+      logger.info(`Retrieved enhanced statistics for client ID: ${id}`, {
+        clientId: parseInt(id),
+        totalStaff: statistics.total_staff,
+        otWithFace: statistics.ot_with_face_registered,
+        otWithoutFace: statistics.ot_without_face_registered,
+        nonOtWithFace: statistics.non_ot_with_face_registered,
+        nonOtWithoutFace: statistics.non_ot_without_face_registered,
+        allOtUsers: statistics.all_ot_users,
+        allNonOtUsers: statistics.all_non_ot_users
+      });
       
       return successResponse(
         res,
@@ -112,9 +93,8 @@ class ClientController {
         { statistics },
         200
       );
-
     } catch (error) {
-      logger.error(`Error in getClientStatistics for ID ${req.params.id}:`, error);
+      logger.error(`Error in getClientStatistics for client ${req.params.id}:`, error);
 
       if (error.message.includes('Client not found')) {
         return errorResponse(res, 'Client not found', 404);
@@ -132,7 +112,48 @@ class ClientController {
       );
     }
   }
+
+  /**
+   * NEW: Get detailed client statistics with additional breakdowns
+   * GET /api/v1/clients/:id/statistics/detailed
+   */
+  async getDetailedClientStatistics(req, res) {
+    try {
+      const { id } = req.params;
+
+      if (!id || isNaN(id)) {
+        return errorResponse(res, 'Invalid client ID. Must be a valid number.', 400);
+      }
+
+      const detailedStatistics = await clientService.getDetailedClientStatistics(parseInt(id));
+      
+      logger.info(`Retrieved detailed statistics for client ID: ${id}`, {
+        clientId: parseInt(id),
+        totalStaff: detailedStatistics.total_staff,
+        breakdownCategories: Object.keys(detailedStatistics.breakdown_summary || {})
+      });
+      
+      return successResponse(
+        res,
+        'Detailed client statistics retrieved successfully',
+        { statistics: detailedStatistics },
+        200
+      );
+    } catch (error) {
+      logger.error(`Error in getDetailedClientStatistics for client ${req.params.id}:`, error);
+
+      if (error.message.includes('Client not found')) {
+        return errorResponse(res, 'Client not found', 404);
+      }
+
+      return errorResponse(
+        res,
+        'Failed to retrieve detailed client statistics',
+        500,
+        process.env.NODE_ENV === 'development' ? error.message : null
+      );
+    }
+  }
 }
 
-// ✅ IMPORTANT: Export a new instance of the class
 module.exports = new ClientController();
