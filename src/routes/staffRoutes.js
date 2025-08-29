@@ -13,7 +13,7 @@ const router = express.Router();
 router.get('/search-fields', staffController.getSearchFields);
 
 /**
- * NEW: @route   GET /api/v1/staffs/filter-options
+ * @route   GET /api/v1/staffs/filter-options
  * @desc    Get available combinational filter options
  * @access  Public (internal use)
  * @returns Available OT, face, and combined filter options
@@ -21,14 +21,23 @@ router.get('/search-fields', staffController.getSearchFields);
 router.get('/filter-options', staffController.getFilterOptions);
 
 /**
+ * NEW: @route   GET /api/v1/staffs/salary-filter-options
+ * @desc    Get available salary filter options and supported currencies
+ * @access  Public (internal use)
+ * @returns Available salary fields, currencies, and usage examples
+ */
+router.get('/salary-filter-options', staffController.getSalaryFilterOptions);
+
+/**
  * @route   GET /api/v1/staffs/client/:clientId
- * @desc    Get all staff members for a specific client with advanced search and combinational filters
+ * @desc    Get all staff members for a specific client with comprehensive filtering
  * @access  Public (internal use)
  * @param   clientId - Client ID
- * @query   page, limit, search, searchField, searchType, status, orderBy, orderDirection
- * @query   otFilter, faceFilter, combinedFilter (NEW combinational filters)
- * @example GET /api/v1/staffs/client/1?combinedFilter=ot_with_face
- * @example GET /api/v1/staffs/client/1?otFilter=enabled&faceFilter=registered
+ * @query   Basic: page, limit, search, searchField, searchType, status, orderBy, orderDirection
+ * @query   Combinational: otFilter, faceFilter, combinedFilter
+ * @query   Salary: salaryField, minSalary, maxSalary, currency
+ * @example GET /api/v1/staffs/client/1?salaryField=basic_salary&minSalary=50000&maxSalary=100000
+ * @example GET /api/v1/staffs/client/1?combinedFilter=ot_with_face&salaryField=ctc&minSalary=80000
  */
 router.get('/client/:clientId', staffController.getStaffByClient);
 

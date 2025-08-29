@@ -47,7 +47,7 @@ class QueryHelpers {
   }
 
   /**
-   * NEW: Build combinational filter conditions for OT and Face Registration
+   * Build combinational filter conditions for OT and Face Registration
    * @param {string} otFilter - Overtime filter: 'enabled', 'disabled', 'all'
    * @param {string} faceFilter - Face registration filter: 'registered', 'not_registered', 'all'
    * @param {string} combinedFilter - Predefined combined filter
@@ -157,6 +157,76 @@ class QueryHelpers {
       default:
         return null;
     }
+  }
+
+  /**
+   * NEW: Build salary range filter conditions
+   * @param {string} salaryField - Salary field to filter on ('take_home', 'basic_salary', 'ctc')
+   * @param {number} minSalary - Minimum salary value
+   * @param {number} maxSalary - Maximum salary value
+   * @param {string} currency - Currency filter (optional)
+   * @returns {Object} Sequelize where condition for salary filtering
+   */
+  static buildSalaryRangeCondition(salaryField, minSalary, maxSalary, currency = null) {
+    if (!salaryField) return {};
+
+    const salaryConditions = {};
+    const currencyCondition = {};
+
+    // Build salary range condition
+    if (minSalary !== null && minSalary !== undefined) {
+      salaryConditions[Op.gte] = parseFloat(minSalary);
+    }
+
+    if (maxSalary !== null && maxSalary !== undefined) {
+      salaryConditions[Op.lte] = parseFloat(maxSalary);
+    }
+
+    // Build currency condition if provided
+    if (currency) {
+      currencyCondition.currency = currency;
+    }
+
+    // Combine conditions
+    const finalCondition = {};
+    
+    if (Object.keys(salaryConditions).length > 0) {
+      finalCondition[salaryField] = salaryConditions;
+    }
+
+    if (Object.keys(currencyCondition).length > 0) {
+      Object.assign(finalCondition, currencyCondition);
+    }
+
+    return Object.keys(finalCondition).length > 0 ? finalCondition : {};
+  }
+
+  /**
+   * NEW: Build SQL condition for salary range in raw queries
+   * @param {string} salaryField - Salary field to filter on
+   * @param {number} minSalary - Minimum salary value
+   * @param {number} maxSalary - Maximum salary value
+   * @param {string} currency - Currency filter (optional)
+   * @returns {string} SQL WHERE clause condition
+   */
+  static buildSalaryRangeSQL(salaryField, minSalary, maxSalary, currency = null) {
+    if (!salaryField) return '';
+
+    const conditions = [];
+
+    if (minSalary !== null && minSalary !== undefined) {
+      conditions.push(`us.${salaryField} >= :minSalary`);
+    }
+
+    if (maxSalary !== null && maxSalary !== undefined) {
+      conditions.push(`us.${salaryField} <= :maxSalary`);
+    }
+
+    if (currency) {
+      conditions.push(`us.currency = :currency`);
+    }
+
+    return conditions.length > 0 ? `AND (${conditions.join(' AND ')})` : '';
   }
 
   /**

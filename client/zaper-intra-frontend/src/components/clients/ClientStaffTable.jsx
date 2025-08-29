@@ -15,9 +15,10 @@ import {
   AlertTriangle,
   Search,
   Filter,
-  MoreHorizontal,
+  DollarSign,
   X,
-  CheckSquare
+  CheckCircle2,
+  XCircle
 } from 'lucide-react';
 import { Table } from '../ui/Table';
 import useClientStaff from '../../hooks/useClientStaff';
@@ -35,6 +36,12 @@ const ClientStaffTable = ({ clientId, className = '' }) => {
   const [selectedCombinedFilter, setSelectedCombinedFilter] = useState(null);
   const [selectedOtFilter, setSelectedOtFilter] = useState(null);
   const [selectedFaceFilter, setSelectedFaceFilter] = useState(null);
+  
+  // Salary filter state
+  const [selectedSalaryField, setSelectedSalaryField] = useState('basic_salary');
+  const [minSalary, setMinSalary] = useState('');
+  const [maxSalary, setMaxSalary] = useState('');
+  const [selectedCurrency, setSelectedCurrency] = useState('');
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -95,10 +102,40 @@ const ClientStaffTable = ({ clientId, className = '' }) => {
       params.faceFilter = selectedFaceFilter.value;
     }
 
+    // Salary filter parameters
+    if (minSalary || maxSalary) {
+      params.salaryField = selectedSalaryField;
+      
+      if (minSalary) {
+        params.minSalary = parseInt(minSalary);
+      }
+      
+      if (maxSalary) {
+        params.maxSalary = parseInt(maxSalary);
+      }
+      
+      if (selectedCurrency) {
+        params.currency = selectedCurrency;
+      }
+    }
+
     console.log('Query params being sent:', params);
 
     return params;
-  }, [currentPage, pageLimit, debouncedSearchTerm, selectedField, searchType, selectedCombinedFilter, selectedOtFilter, selectedFaceFilter]);
+  }, [
+    currentPage, 
+    pageLimit, 
+    debouncedSearchTerm, 
+    selectedField, 
+    searchType, 
+    selectedCombinedFilter, 
+    selectedOtFilter, 
+    selectedFaceFilter,
+    selectedSalaryField,
+    minSalary,
+    maxSalary,
+    selectedCurrency
+  ]);
 
   // Fetch staff data
   const { staffs, pagination, summary, loading, error, refetch } = useClientStaff(clientId, queryParams);
@@ -153,6 +190,17 @@ const ClientStaffTable = ({ clientId, className = '' }) => {
     }));
   }, [filterOptions.faceFilters]);
 
+  // Prepare currency options for Select
+  const currencyOptions = useMemo(() => {
+    return [
+      { value: '', label: 'Any Currency' },
+      ...filterOptions.currencies.map(currency => ({
+        value: currency,
+        label: currency
+      }))
+    ];
+  }, [filterOptions.currencies]);
+
   // Event handlers
   const handleSearchChange = useCallback((e) => {
     const value = e.target.value;
@@ -197,6 +245,34 @@ const ClientStaffTable = ({ clientId, className = '' }) => {
     }
   }, []);
 
+  const handleSalaryFieldChange = useCallback((e) => {
+    setSelectedSalaryField(e.target.value);
+    setCurrentPage(1);
+  }, []);
+
+  const handleMinSalaryChange = useCallback((e) => {
+    const value = e.target.value;
+    // Allow only numbers
+    if (value === '' || /^\d+$/.test(value)) {
+      setMinSalary(value);
+      setCurrentPage(1);
+    }
+  }, []);
+
+  const handleMaxSalaryChange = useCallback((e) => {
+    const value = e.target.value;
+    // Allow only numbers
+    if (value === '' || /^\d+$/.test(value)) {
+      setMaxSalary(value);
+      setCurrentPage(1);
+    }
+  }, []);
+
+  const handleCurrencyChange = useCallback((option) => {
+    setSelectedCurrency(option ? option.value : '');
+    setCurrentPage(1);
+  }, []);
+
   const handlePageChange = useCallback((newPage) => {
     setCurrentPage(newPage);
   }, []);
@@ -209,6 +285,10 @@ const ClientStaffTable = ({ clientId, className = '' }) => {
     setSelectedCombinedFilter(null);
     setSelectedOtFilter(null);
     setSelectedFaceFilter(null);
+    setSelectedSalaryField('basic_salary');
+    setMinSalary('');
+    setMaxSalary('');
+    setSelectedCurrency('');
     setCurrentPage(1);
     debouncedSetSearch.cancel();
   }, [debouncedSetSearch]);
@@ -216,8 +296,19 @@ const ClientStaffTable = ({ clientId, className = '' }) => {
   // Check if any filters are active
   const hasActiveFilters = useMemo(() => {
     return debouncedSearchTerm || selectedField || searchType !== 'like' || 
-           selectedCombinedFilter || selectedOtFilter || selectedFaceFilter;
-  }, [debouncedSearchTerm, selectedField, searchType, selectedCombinedFilter, selectedOtFilter, selectedFaceFilter]);
+           selectedCombinedFilter || selectedOtFilter || selectedFaceFilter ||
+           minSalary || maxSalary || selectedCurrency;
+  }, [
+    debouncedSearchTerm, 
+    selectedField, 
+    searchType, 
+    selectedCombinedFilter, 
+    selectedOtFilter, 
+    selectedFaceFilter,
+    minSalary,
+    maxSalary,
+    selectedCurrency
+  ]);
 
   // Complete table columns with ALL original fields
   const columns = useMemo(() => [
@@ -733,7 +824,7 @@ const ClientStaffTable = ({ clientId, className = '' }) => {
         </div>
 
         {/* Filter Controls Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
           {/* Combined Filter */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -819,14 +910,126 @@ const ClientStaffTable = ({ clientId, className = '' }) => {
             />
           </div>
 
+          {/* Currency Filter */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Currency
+            </label>
+            <Select
+              options={currencyOptions}
+              value={currencyOptions.find(c => c.value === selectedCurrency) || null}
+              onChange={handleCurrencyChange}
+              placeholder="Select currency"
+              isClearable
+              className="text-sm"
+              styles={{
+                control: (provided) => ({
+                  ...provided,
+                  minHeight: '38px',
+                  border: '1px solid #d1d5db',
+                  '&:hover': {
+                    border: '1px solid #6366f1'
+                  }
+                })
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Salary Filter Section */}
+        <div className="border-t border-gray-200 pt-6">
+          <div className="mb-4">
+            <h4 className="text-sm font-medium text-gray-700 mb-3">
+              <DollarSign className="w-4 h-4 inline mr-1" />
+              Salary Filter
+            </h4>
+            
+            {/* Salary Field Radio Buttons */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-600 mb-2">Salary Type</label>
+              <div className="flex flex-wrap gap-6">
+                {filterOptions.salaryFields.map((field) => (
+                  <label key={field.value} className="inline-flex items-center">
+                    <input
+                      type="radio"
+                      name="salaryField"
+                      value={field.value}
+                      checked={selectedSalaryField === field.value}
+                      onChange={handleSalaryFieldChange}
+                      className="form-radio h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">
+                      {field.label}
+                      <span className="block text-xs text-gray-500">{field.description}</span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Salary Range Inputs */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-600 mb-2">
+                  Minimum Salary
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="1000"
+                  value={minSalary}
+                  onChange={handleMinSalaryChange}
+                  placeholder="Enter minimum salary"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-600 mb-2">
+                  Maximum Salary
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="1000"
+                  value={maxSalary}
+                  onChange={handleMaxSalaryChange}
+                  placeholder="Enter maximum salary"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
+                />
+              </div>
+            </div>
+
+            {/* Salary Range Validation */}
+            {minSalary && maxSalary && parseInt(minSalary) > parseInt(maxSalary) && (
+              <div className="mt-2 flex items-center text-red-600">
+                <XCircle className="w-4 h-4 mr-1" />
+                <span className="text-sm">Minimum salary cannot be greater than maximum salary</span>
+              </div>
+            )}
+            
+            {(minSalary || maxSalary) && (
+              <div className="mt-2 flex items-center text-green-600">
+                <CheckCircle2 className="w-4 h-4 mr-1" />
+                <span className="text-sm">
+                  Filtering by {filterOptions.salaryFields.find(f => f.value === selectedSalaryField)?.label}:
+                  {minSalary && ` ≥ ${parseInt(minSalary).toLocaleString()}`}
+                  {minSalary && maxSalary && ' and'}
+                  {maxSalary && ` ≤ ${parseInt(maxSalary).toLocaleString()}`}
+                  {selectedCurrency && ` (${selectedCurrency})`}
+                </span>
+              </div>
+            )}
+          </div>
+
           {/* Clear All Button */}
-          <div className="pt-7">
+          <div className="flex justify-end">
             <button
               onClick={handleClearAllFilters}
-              className="w-full px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors flex items-center justify-center"
+              className="px-6 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors flex items-center"
             >
               <X className="w-4 h-4 mr-2" />
-              Clear All
+              Clear All Filters
             </button>
           </div>
         </div>
@@ -866,6 +1069,12 @@ const ClientStaffTable = ({ clientId, className = '' }) => {
                   {selectedFaceFilter && (
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
                       Face: {selectedFaceFilter.label}
+                    </span>
+                  )}
+                  {(minSalary || maxSalary) && (
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
+                      Salary: {minSalary || '0'} - {maxSalary || '∞'}
+                      {selectedCurrency && ` (${selectedCurrency})`}
                     </span>
                   )}
                 </div>

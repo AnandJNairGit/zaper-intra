@@ -32,7 +32,7 @@ const STAFF_CONSTANTS = {
   // Fields that require exact match (boolean, enum fields)
   EXACT_MATCH_FIELDS: ['current_active'],
   
-  // NEW: Combinational filter options
+  // Combinational filter options
   COMBINATIONAL_FILTERS: {
     // Overtime filter options
     OT_FILTERS: {
@@ -60,6 +60,18 @@ const STAFF_CONSTANTS = {
       ALL_WITHOUT_FACE: 'all_without_face',
       ALL: 'all'
     }
+  },
+  
+  // NEW: Salary filtration options
+  SALARY_FILTERS: {
+    FIELDS: ['take_home', 'basic_salary', 'ctc'],
+    FIELD_MAPPING: {
+      'take_home': 'take_home',
+      'basic_salary': 'basic_salary',
+      'ctc': 'ctc'
+    },
+    DEFAULT_CURRENCY: 'USD',
+    SUPPORTED_CURRENCIES: ['USD', 'EUR', 'INR', 'GBP', 'CAD', 'AUD']
   },
   
   DEFAULT_PAGINATION: {

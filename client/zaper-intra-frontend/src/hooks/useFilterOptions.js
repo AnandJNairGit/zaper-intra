@@ -6,7 +6,9 @@ export const useFilterOptions = () => {
   const [filterOptions, setFilterOptions] = useState({
     combinedFilters: [],
     otFilters: [],
-    faceFilters: []
+    faceFilters: [],
+    salaryFields: [],
+    currencies: []
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -33,7 +35,13 @@ export const useFilterOptions = () => {
       { value: '', label: 'All Face Status', icon: '📊' },
       { value: 'registered', label: 'Face Registered', icon: '👤' },
       { value: 'not_registered', label: 'Face Not Registered', icon: '❌' }
-    ]
+    ],
+    salaryFields: [
+      { value: 'basic_salary', label: 'Basic Salary', description: 'Base salary before allowances' },
+      { value: 'take_home', label: 'Take Home', description: 'Net salary after deductions' },
+      { value: 'ctc', label: 'CTC', description: 'Cost to Company (total compensation)' }
+    ],
+    currencies: ['USD', 'INR', 'EUR', 'AED', 'GBP', 'CAD', 'AUD', 'SGD']
   };
 
   useEffect(() => {

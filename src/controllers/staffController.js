@@ -6,7 +6,7 @@ const logger = require('../utils/logger');
 
 class StaffController {
   /**
-   * Get all staff members for a specific client with advanced search and combinational filters
+   * Get all staff members for a specific client with advanced search, combinational filters, and salary filters
    * GET /api/v1/staffs/client/:clientId
    */
   async getStaffByClient(req, res) {
@@ -29,7 +29,12 @@ class StaffController {
         searchTerm: queryOptions.search || null,
         otFilter: queryOptions.otFilter || 'all',
         faceFilter: queryOptions.faceFilter || 'all',
-        combinedFilter: queryOptions.combinedFilter || null
+        combinedFilter: queryOptions.combinedFilter || null,
+        // NEW: Salary filter logging
+        salaryField: queryOptions.salaryField || null,
+        minSalary: queryOptions.minSalary || null,
+        maxSalary: queryOptions.maxSalary || null,
+        currency: queryOptions.currency || null
       });
       
       return successResponse(
@@ -89,7 +94,7 @@ class StaffController {
   }
 
   /**
-   * NEW: Get available combinational filter options
+   * Get available combinational filter options
    * GET /api/v1/staffs/filter-options
    */
   async getFilterOptions(req, res) {
@@ -105,6 +110,26 @@ class StaffController {
     } catch (error) {
       logger.error('Error in getFilterOptions:', error);
       return errorResponse(res, 'Failed to retrieve filter options', 500);
+    }
+  }
+
+  /**
+   * NEW: Get available salary filter options
+   * GET /api/v1/staffs/salary-filter-options
+   */
+  async getSalaryFilterOptions(req, res) {
+    try {
+      const salaryFilterOptions = StaffValidator.getSalaryFilterOptions();
+      
+      return successResponse(
+        res,
+        'Salary filter options retrieved successfully',
+        salaryFilterOptions,
+        200
+      );
+    } catch (error) {
+      logger.error('Error in getSalaryFilterOptions:', error);
+      return errorResponse(res, 'Failed to retrieve salary filter options', 500);
     }
   }
 

@@ -11,7 +11,7 @@ const QueryHelpers = require('../../utils/queryHelpers');
 
 class StaffQueryBuilder {
   /**
-   * Build main staff query options with enhanced search and combinational filters
+   * Build main staff query options with enhanced search, combinational filters, and salary filters
    * @param {number} clientId - Client ID
    * @param {Object} options - Query options
    * @returns {Object} Sequelize query options
@@ -19,17 +19,19 @@ class StaffQueryBuilder {
   static buildStaffQuery(clientId, options) {
     const { 
       page, limit, search, searchField, searchType, status, orderBy, orderDirection,
-      otFilter, faceFilter, combinedFilter 
+      otFilter, faceFilter, combinedFilter, salaryField, minSalary, maxSalary, currency
     } = options;
     
     const offset = (page - 1) * limit;
 
-    // Check if we need complex combinational filtering
+    // Check if we need complex filtering (combinational or salary filters)
     const filterConditions = QueryHelpers.buildCombinationalFilterConditions(
       otFilter, faceFilter, combinedFilter
     );
 
-    if (filterConditions.requiresComplexQuery) {
+    const hasSalaryFilter = salaryField && (minSalary !== null || maxSalary !== null);
+
+    if (filterConditions.requiresComplexQuery || hasSalaryFilter) {
       return this.buildComplexStaffQuery(clientId, options, filterConditions);
     } else {
       return this.buildSimpleStaffQuery(clientId, options);
@@ -37,7 +39,7 @@ class StaffQueryBuilder {
   }
 
   /**
-   * Build simple staff query for basic filtering (no combinational filters)
+   * Build simple staff query for basic filtering (no combinational or salary filters)
    * @param {number} clientId - Client ID
    * @param {Object} options - Query options
    * @returns {Object} Sequelize query options
@@ -65,14 +67,17 @@ class StaffQueryBuilder {
   }
 
   /**
-   * FIXED: Build complex staff query with combinational filters using raw SQL
+   * Build complex staff query with combinational and salary filters using raw SQL
    * @param {number} clientId - Client ID
    * @param {Object} options - Query options
    * @param {Object} filterConditions - Filter conditions
    * @returns {Object} Raw SQL query options
    */
   static buildComplexStaffQuery(clientId, options, filterConditions) {
-    const { page, limit, search, searchField, searchType, status, orderBy, orderDirection } = options;
+    const { 
+      page, limit, search, searchField, searchType, status, orderBy, orderDirection,
+      salaryField, minSalary, maxSalary, currency
+    } = options;
     const offset = (page - 1) * limit;
 
     // Build search condition
@@ -128,6 +133,12 @@ class StaffQueryBuilder {
       combinationalCondition = `AND (${conditions.join(' AND ')})`;
     }
 
+    // NEW: Build salary filter condition
+    let salaryCondition = '';
+    if (salaryField) {
+      salaryCondition = QueryHelpers.buildSalaryRangeSQL(salaryField, minSalary, maxSalary, currency);
+    }
+
     // Build order clause
     let orderClause = '';
     switch (orderBy) {
@@ -148,7 +159,7 @@ class StaffQueryBuilder {
         break;
     }
 
-    // FIXED: Cast JSON columns to text and avoid DISTINCT
+    // Build the complete raw query
     const rawQuery = `
       SELECT
         cu.staff_id,
@@ -210,12 +221,13 @@ class StaffQueryBuilder {
       ${statusCondition}
       ${searchCondition}
       ${combinationalCondition}
+      ${salaryCondition}
       
       ${orderClause}
       LIMIT :limit OFFSET :offset
     `;
 
-    // FIXED: Simplified count query
+    // Build count query
     const countQuery = `
       SELECT COUNT(DISTINCT cu.staff_id) as count
       FROM client_users cu
@@ -228,6 +240,7 @@ class StaffQueryBuilder {
       ${statusCondition}
       ${searchCondition}
       ${combinationalCondition}
+      ${salaryCondition}
     `;
 
     // Prepare replacements
@@ -253,6 +266,19 @@ class StaffQueryBuilder {
       }
     }
 
+    // NEW: Add salary filter replacements
+    if (salaryField) {
+      if (minSalary !== null && minSalary !== undefined) {
+        replacements.minSalary = minSalary;
+      }
+      if (maxSalary !== null && maxSalary !== undefined) {
+        replacements.maxSalary = maxSalary;
+      }
+      if (currency) {
+        replacements.currency = currency;
+      }
+    }
+
     return {
       isRawQuery: true,
       query: rawQuery,
@@ -261,7 +287,13 @@ class StaffQueryBuilder {
     };
   }
 
-  // ... rest of the methods remain the same
+  /**
+   * Build enhanced search condition
+   * @param {string} search - Search term
+   * @param {string} searchField - Specific field to search in
+   * @param {string} searchType - Type of search
+   * @returns {Object} Search condition
+   */
   static buildSearchCondition(search, searchField, searchType) {
     if (!search) return {};
 
@@ -284,6 +316,11 @@ class StaffQueryBuilder {
     return {};
   }
 
+  /**
+   * Build include options for associated models
+   * @param {Object} includeWhere - Where condition for user search
+   * @returns {Array} Sequelize include options
+   */
   static buildIncludeOptions(includeWhere) {
     const { User, Client, ClientRole } = require('../../models');
 
@@ -308,6 +345,11 @@ class StaffQueryBuilder {
     ];
   }
 
+  /**
+   * Build batch queries for related data
+   * @param {Array} userIds - Array of user IDs
+   * @returns {Object} Batch query options
+   */
   static buildBatchQueries(userIds) {
     const { UserPhoto, UserJobProfile, UserSalary, UserNotificationToken, ClientJobProfile } = require('../../models');
 

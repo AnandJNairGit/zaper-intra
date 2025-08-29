@@ -25,7 +25,7 @@ class StaffValidator {
   }
 
   /**
-   * Validate and sanitize query options with enhanced search and combinational filters
+   * Validate and sanitize query options with enhanced search, combinational filters, and salary filters
    * @param {Object} options - Query options
    * @returns {Object} Validated options
    */
@@ -39,10 +39,15 @@ class StaffValidator {
       status = null,
       orderBy = 'joining_date',
       orderDirection = 'DESC',
-      // NEW: Combinational filter parameters
+      // Combinational filter parameters
       otFilter = 'all',
       faceFilter = 'all',
-      combinedFilter = null
+      combinedFilter = null,
+      // NEW: Salary filter parameters
+      salaryField = null,
+      minSalary = null,
+      maxSalary = null,
+      currency = null
     } = options;
 
     // Validate pagination
@@ -78,7 +83,7 @@ class StaffValidator {
       ? searchType
       : 'like';
 
-    // NEW: Validate combinational filter parameters
+    // Validate combinational filter parameters
     const validOtFilter = Object.values(STAFF_CONSTANTS.COMBINATIONAL_FILTERS.OT_FILTERS)
       .includes(otFilter) ? otFilter : 'all';
 
@@ -89,6 +94,40 @@ class StaffValidator {
       Object.values(STAFF_CONSTANTS.COMBINATIONAL_FILTERS.COMBINED_FILTERS)
       .includes(combinedFilter) ? combinedFilter : null;
 
+    // NEW: Validate salary filter parameters
+    const validSalaryField = salaryField && 
+      STAFF_CONSTANTS.SALARY_FILTERS.FIELDS.includes(salaryField) 
+      ? salaryField 
+      : null;
+
+    let validMinSalary = null;
+    let validMaxSalary = null;
+
+    if (minSalary !== null && minSalary !== undefined) {
+      const parsedMin = parseFloat(minSalary);
+      if (!isNaN(parsedMin) && parsedMin >= 0) {
+        validMinSalary = parsedMin;
+      }
+    }
+
+    if (maxSalary !== null && maxSalary !== undefined) {
+      const parsedMax = parseFloat(maxSalary);
+      if (!isNaN(parsedMax) && parsedMax >= 0) {
+        validMaxSalary = parsedMax;
+      }
+    }
+
+    // Validate salary range logic
+    if (validMinSalary !== null && validMaxSalary !== null && validMinSalary > validMaxSalary) {
+      // Swap values if min > max
+      [validMinSalary, validMaxSalary] = [validMaxSalary, validMinSalary];
+    }
+
+    const validCurrency = currency && 
+      STAFF_CONSTANTS.SALARY_FILTERS.SUPPORTED_CURRENCIES.includes(currency.toUpperCase())
+      ? currency.toUpperCase()
+      : null;
+
     return {
       page: validatedPage,
       limit: validatedLimit,
@@ -98,10 +137,15 @@ class StaffValidator {
       status: validStatus,
       orderBy: validOrderBy,
       orderDirection: validDirection,
-      // NEW: Validated combinational filters
+      // Combinational filters
       otFilter: validOtFilter,
       faceFilter: validFaceFilter,
-      combinedFilter: validCombinedFilter
+      combinedFilter: validCombinedFilter,
+      // NEW: Salary filters
+      salaryField: validSalaryField,
+      minSalary: validMinSalary,
+      maxSalary: validMaxSalary,
+      currency: validCurrency
     };
   }
 
@@ -120,7 +164,7 @@ class StaffValidator {
   }
 
   /**
-   * NEW: Get available combinational filter options
+   * Get available combinational filter options
    * @returns {Object} Available filter options
    */
   static getCombinationalFilterOptions() {
@@ -153,7 +197,28 @@ class StaffValidator {
       }
     };
   }
+
+  /**
+   * NEW: Get available salary filter options
+   * @returns {Object} Available salary filter options
+   */
+  static getSalaryFilterOptions() {
+    return {
+      salaryFields: STAFF_CONSTANTS.SALARY_FILTERS.FIELDS,
+      supportedCurrencies: STAFF_CONSTANTS.SALARY_FILTERS.SUPPORTED_CURRENCIES,
+      defaultCurrency: STAFF_CONSTANTS.SALARY_FILTERS.DEFAULT_CURRENCY,
+      descriptions: {
+        take_home: 'Net take-home salary after deductions',
+        basic_salary: 'Basic salary before allowances',
+        ctc: 'Cost to Company (total compensation)'
+      },
+      examples: {
+        basicUsage: 'salaryField=basic_salary&minSalary=50000&maxSalary=100000',
+        withCurrency: 'salaryField=ctc&minSalary=80000&currency=USD',
+        combined: 'salaryField=take_home&minSalary=40000&combinedFilter=ot_with_face'
+      }
+    };
+  }
 }
 
 module.exports = StaffValidator;
- 
