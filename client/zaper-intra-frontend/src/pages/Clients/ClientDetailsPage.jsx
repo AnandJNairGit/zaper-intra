@@ -18,7 +18,12 @@ import {
   UserMinus,
   Target,
   CheckCircle2,
-  XCircle
+  XCircle,
+  Smartphone,
+  Tablet,
+  Monitor,
+  Wifi,
+  WifiOff
 } from 'lucide-react';
 import useClientStatistics from '../../hooks/useClientStatistics';
 import ClientStaffTable from '../../components/clients/ClientStaffTable';
@@ -87,7 +92,7 @@ const ClientDetailsPage = () => {
     ? Math.round((statistics.projects_ended_last_30_days / statistics.total_projects) * 100)
     : 0;
 
-  // Define statistics cards with linear gradients and calculated percentages
+  // Define statistics cards with linear gradients and calculated percentages (including new device stats)
   const statsCards = [
     // Staff Overview
     {
@@ -124,6 +129,19 @@ const ClientDetailsPage = () => {
       iconColor: 'text-white',
       subtitle: `${statistics.staff_with_face_registered} registered (${Math.round((statistics.staff_with_face_registered / statistics.total_staff) * 100)}%) • ${statistics.staff_without_face_registered} pending (${Math.round((statistics.staff_without_face_registered / statistics.total_staff) * 100)}%)`,
       trend: statistics.staff_face_registration_percentage >= 80 ? 'positive' : statistics.staff_face_registration_percentage >= 60 ? 'neutral' : 'negative'
+    },
+
+    // Device Adoption Overview
+    {
+      title: 'Device Adoption',
+      value: `${statistics.device_adoption_percentage}%`,
+      icon: Smartphone,
+      gradient: 'bg-gradient-to-br from-rose-500 to-pink-600',
+      textColor: 'text-white',
+      iconBg: 'bg-white/20',
+      iconColor: 'text-white',
+      subtitle: `${statistics.staff_with_devices} with devices (${Math.round((statistics.staff_with_devices / statistics.total_staff) * 100)}%) • ${statistics.staff_without_devices} without devices (${Math.round((statistics.staff_without_devices / statistics.total_staff) * 100)}%)`,
+      trend: statistics.device_adoption_percentage >= 50 ? 'positive' : statistics.device_adoption_percentage >= 25 ? 'neutral' : 'negative'
     },
 
     // OT Eligibility Overview
@@ -163,6 +181,19 @@ const ClientDetailsPage = () => {
       iconColor: 'text-white',
       subtitle: `${statistics.non_ot_with_face_registered} registered (${statistics.all_non_ot_users > 0 ? Math.round((statistics.non_ot_with_face_registered / statistics.all_non_ot_users) * 100) : 0}%) • ${statistics.non_ot_without_face_registered} pending (${statistics.all_non_ot_users > 0 ? Math.round((statistics.non_ot_without_face_registered / statistics.all_non_ot_users) * 100) : 0}%)`,
       trend: statistics.all_non_ot_users > 0 ? (statistics.non_ot_with_face_percentage >= 80 ? 'positive' : 'neutral') : null
+    },
+
+    // Mobile Device Distribution
+    {
+      title: 'Mobile Devices',
+      value: statistics.total_mobile_devices,
+      icon: Tablet,
+      gradient: 'bg-gradient-to-br from-violet-500 to-purple-600',
+      textColor: 'text-white',
+      iconBg: 'bg-white/20',
+      iconColor: 'text-white',
+      subtitle: `Android: ${statistics.android_devices} (${statistics.android_device_percentage}%) • iOS: ${statistics.ios_devices} (${statistics.ios_device_percentage}%)`,
+      trend: statistics.total_mobile_devices > 0 ? 'positive' : 'neutral'
     },
 
     // Projects
@@ -367,10 +398,106 @@ const ClientDetailsPage = () => {
                 </div>
               </div>
             </div>
+
+            {/* Device Breakdown - NEW */}
+            <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-all duration-300">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="bg-gradient-to-br from-violet-500 to-purple-600 p-3 rounded-lg shadow-md">
+                  <Smartphone className="h-5 w-5 text-white" />
+                </div>
+                <h3 className="text-lg font-bold text-gray-900">Device Breakdown</h3>
+              </div>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                  <span className="text-gray-700 font-medium">Total Devices:</span>
+                  <span className="font-bold text-gray-900 text-lg">{statistics.breakdown_summary.device_breakdown.total_devices}</span>
+                </div>
+                <div className="pl-4 space-y-3">
+                  <div className="flex justify-between items-center py-2">
+                    <span className="text-gray-600 flex items-center gap-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      Android Devices:
+                    </span>
+                    <span className="font-semibold text-green-700">
+                      {statistics.breakdown_summary.device_breakdown.android_devices} 
+                      <span className="text-sm text-gray-500 ml-1">
+                        ({statistics.breakdown_summary.device_breakdown.device_distribution.android_percentage}%)
+                      </span>
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center py-2">
+                    <span className="text-gray-600 flex items-center gap-2">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                      iOS Devices:
+                    </span>
+                    <span className="font-semibold text-blue-600">
+                      {statistics.breakdown_summary.device_breakdown.ios_devices} 
+                      <span className="text-sm text-gray-500 ml-1">
+                        ({statistics.breakdown_summary.device_breakdown.device_distribution.ios_percentage}%)
+                      </span>
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center py-2">
+                    <span className="text-gray-600 flex items-center gap-2">
+                      <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
+                      Other Devices:
+                    </span>
+                    <span className="font-semibold text-gray-600">
+                      {statistics.breakdown_summary.device_breakdown.other_devices} 
+                      <span className="text-sm text-gray-500 ml-1">
+                        ({statistics.breakdown_summary.device_breakdown.device_distribution.other_percentage}%)
+                      </span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Staff Device Status - NEW */}
+            <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-all duration-300">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="bg-gradient-to-br from-rose-500 to-pink-600 p-3 rounded-lg shadow-md">
+                  <Wifi className="h-5 w-5 text-white" />
+                </div>
+                <h3 className="text-lg font-bold text-gray-900">Staff Device Status</h3>
+              </div>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                  <span className="text-gray-700 font-medium">Total Staff:</span>
+                  <span className="font-bold text-gray-900 text-lg">{statistics.total_staff}</span>
+                </div>
+                <div className="pl-4 space-y-3">
+                  <div className="flex justify-between items-center py-2">
+                    <span className="text-gray-600 flex items-center gap-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      With Devices:
+                    </span>
+                    <span className="font-semibold text-green-700">
+                      {statistics.breakdown_summary.device_breakdown.staff_with_devices} 
+                      <span className="text-sm text-gray-500 ml-1">
+                        ({Math.round((statistics.breakdown_summary.device_breakdown.staff_with_devices / statistics.total_staff) * 100)}%)
+                      </span>
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center py-2">
+                    <span className="text-gray-600 flex items-center gap-2">
+                      <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                      Without Devices:
+                    </span>
+                    <span className="font-semibold text-red-600">
+                      {statistics.breakdown_summary.device_breakdown.staff_without_devices} 
+                      <span className="text-sm text-gray-500 ml-1">
+                        ({Math.round((statistics.breakdown_summary.device_breakdown.staff_without_devices / statistics.total_staff) * 100)}%)
+                      </span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Staff Table - HEADING REMOVED */}
+        {/* Staff Table */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
           <ClientStaffTable clientId={clientId} />
         </div>

@@ -22,20 +22,29 @@ router.get('/:id', clientController.getClientById);
 
 /**
  * ENHANCED: @route   GET /api/v1/clients/:id/statistics
- * @desc    Get comprehensive client statistics with OT and face registration combinations
+ * @desc    Get comprehensive client statistics with OT, face registration combinations, and device counts
  * @access  Public (internal use)
  * @param   id - Client ID
- * @returns Enhanced statistics including all OT and face registration combinations
+ * @returns Enhanced statistics including Android and iOS device counts
  */
 router.get('/:id/statistics', clientController.getClientStatistics);
 
 /**
- * NEW: @route   GET /api/v1/clients/:id/statistics/detailed
+ * @route   GET /api/v1/clients/:id/statistics/detailed
  * @desc    Get detailed client statistics with additional breakdowns
  * @access  Public (internal use)
  * @param   id - Client ID
  * @returns Detailed statistics with comprehensive breakdowns
  */
 router.get('/:id/statistics/detailed', clientController.getDetailedClientStatistics);
+
+/**
+ * NEW: @route   GET /api/v1/clients/:id/statistics/devices
+ * @desc    Get detailed device statistics breakdown for a client
+ * @access  Public (internal use)
+ * @param   id - Client ID
+ * @returns Detailed device type breakdown with registration dates
+ */
+router.get('/:id/statistics/devices', clientController.getClientDeviceStatistics);
 
 module.exports = router;
