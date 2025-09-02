@@ -48,11 +48,19 @@ const STAFF_CONSTANTS = {
       ALL: 'all'
     },
     
-    // NEW: Device type filter options
+    // Device type filter options
     DEVICE_FILTERS: {
       ANDROID: 'android',
       IOS: 'ios',
       NO_DEVICE: 'none',
+      ALL: 'all'
+    },
+
+    // NEW: Project count filter options
+    PROJECT_FILTERS: {
+      SINGLE: 'single',
+      MULTI: 'multi',
+      NONE: 'none',
       ALL: 'all'
     },
     

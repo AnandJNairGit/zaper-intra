@@ -29,12 +29,20 @@ router.get('/filter-options', staffController.getFilterOptions);
 router.get('/salary-filter-options', staffController.getSalaryFilterOptions);
 
 /**
- * NEW: @route   GET /api/v1/staffs/device-filter-options
+ * @route   GET /api/v1/staffs/device-filter-options
  * @desc    Get available device filter options
  * @access  Public (internal use)
  * @returns Available device filter types and usage examples
  */
 router.get('/device-filter-options', staffController.getDeviceFilterOptions);
+
+/**
+ * NEW: @route   GET /api/v1/staffs/project-filter-options
+ * @desc    Get available project count filter options
+ * @access  Public (internal use)
+ * @returns Available project filter types and usage examples
+ */
+router.get('/project-filter-options', staffController.getProjectFilterOptions);
 
 /**
  * @route   GET /api/v1/staffs/client/:clientId
@@ -44,10 +52,11 @@ router.get('/device-filter-options', staffController.getDeviceFilterOptions);
  * @query   Basic: page, limit, search, searchField, searchType, status, orderBy, orderDirection
  * @query   Combinational: otFilter, faceFilter, combinedFilter
  * @query   Salary: salaryField, minSalary, maxSalary, currency
- * @query   Device: deviceFilter (NEW)
- * @example GET /api/v1/staffs/client/1?deviceFilter=android
- * @example GET /api/v1/staffs/client/1?deviceFilter=ios&otFilter=enabled
- * @example GET /api/v1/staffs/client/1?deviceFilter=none&faceFilter=registered
+ * @query   Device: deviceFilter
+ * @query   Projects: projectsFilter (NEW)
+ * @example GET /api/v1/staffs/client/1?projectsFilter=single
+ * @example GET /api/v1/staffs/client/1?projectsFilter=multi&otFilter=enabled
+ * @example GET /api/v1/staffs/client/1?projectsFilter=none&deviceFilter=android
  */
 router.get('/client/:clientId', staffController.getStaffByClient);
 

@@ -160,7 +160,7 @@ class QueryHelpers {
   }
 
   /**
-   * FIXED: Build device type filter condition using NOT EXISTS for "none"
+   * Build device type filter condition
    * @param {string} deviceFilter - Device filter: 'android', 'ios', 'none', 'all'
    * @returns {string|null} SQL condition for device filtering
    */
@@ -171,8 +171,26 @@ class QueryHelpers {
       case 'ios':
         return 'unt.device_type = \'ios\'';
       case 'none':
-        // FIXED: Use NOT EXISTS instead of checking for NULL id
         return 'NOT EXISTS (SELECT 1 FROM user_notification_tokens unt2 WHERE unt2.user_id = cu.user_id)';
+      case 'all':
+      default:
+        return null;
+    }
+  }
+
+  /**
+   * NEW: Build project count filter condition
+   * @param {string} projectsFilter - Projects filter: 'single', 'multi', 'none', 'all'
+   * @returns {string|null} SQL condition for project count filtering
+   */
+  static buildProjectCountFilterCondition(projectsFilter) {
+    switch (projectsFilter) {
+      case 'single':
+        return '(SELECT COUNT(*) FROM user_projects up WHERE up.user_id = cu.user_id) = 1';
+      case 'multi':
+        return '(SELECT COUNT(*) FROM user_projects up WHERE up.user_id = cu.user_id) > 1';
+      case 'none':
+        return 'NOT EXISTS (SELECT 1 FROM user_projects up WHERE up.user_id = cu.user_id)';
       case 'all':
       default:
         return null;

@@ -56,6 +56,20 @@ const ActiveFiltersSummary = ({ filters, hasActiveFilters, clearAllFilters }) =>
     });
   }
 
+  if (filters.selectedProjectsFilter) {
+    const projectsFilterOptions = [
+      { value: 'multi', label: 'Multi Projects' },
+      { value: 'single', label: 'Single Project' },
+      { value: 'none', label: 'No Projects' }
+    ];
+    
+    const selectedOption = projectsFilterOptions.find(opt => opt.value === filters.selectedProjectsFilter);
+    activeFilters.push({
+      label: `Projects: ${selectedOption?.label || filters.selectedProjectsFilter}`,
+      type: 'projects'
+    });
+  }
+
   if (filters.minSalary || filters.maxSalary) {
     const range = `${filters.minSalary || '0'} - ${filters.maxSalary || '∞'}${filters.selectedCurrency ? ` ${filters.selectedCurrency}` : ''}`;
     activeFilters.push({

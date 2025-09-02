@@ -11,7 +11,7 @@ const QueryHelpers = require('../../utils/queryHelpers');
 
 class StaffQueryBuilder {
   /**
-   * Build main staff query options with enhanced search, combinational filters, salary filters, and device filters
+   * ENHANCED: Build main staff query options with project count filters
    * @param {number} clientId - Client ID
    * @param {Object} options - Query options
    * @returns {Object} Sequelize query options
@@ -19,20 +19,22 @@ class StaffQueryBuilder {
   static buildStaffQuery(clientId, options) {
     const { 
       page, limit, search, searchField, searchType, status, orderBy, orderDirection,
-      otFilter, faceFilter, combinedFilter, salaryField, minSalary, maxSalary, currency, deviceFilter
+      otFilter, faceFilter, combinedFilter, salaryField, minSalary, maxSalary, currency, 
+      deviceFilter, projectsFilter
     } = options;
     
     const offset = (page - 1) * limit;
 
-    // Check if we need complex filtering (combinational, salary, or device filters)
+    // Check if we need complex filtering
     const filterConditions = QueryHelpers.buildCombinationalFilterConditions(
       otFilter, faceFilter, combinedFilter
     );
 
     const hasSalaryFilter = salaryField && (minSalary !== null || maxSalary !== null);
     const hasDeviceFilter = deviceFilter && deviceFilter !== 'all';
+    const hasProjectsFilter = projectsFilter && projectsFilter !== 'all';
 
-    if (filterConditions.requiresComplexQuery || hasSalaryFilter || hasDeviceFilter) {
+    if (filterConditions.requiresComplexQuery || hasSalaryFilter || hasDeviceFilter || hasProjectsFilter) {
       return this.buildComplexStaffQuery(clientId, options, filterConditions);
     } else {
       return this.buildSimpleStaffQuery(clientId, options);
@@ -40,7 +42,7 @@ class StaffQueryBuilder {
   }
 
   /**
-   * Build simple staff query for basic filtering (no combinational, salary, or device filters)
+   * Build simple staff query for basic filtering
    * @param {number} clientId - Client ID
    * @param {Object} options - Query options
    * @returns {Object} Sequelize query options
@@ -68,7 +70,7 @@ class StaffQueryBuilder {
   }
 
   /**
-   * Build complex staff query with combinational, salary, and device filters using raw SQL
+   * ENHANCED: Build complex staff query with all filter types including project counts
    * @param {number} clientId - Client ID
    * @param {Object} options - Query options
    * @param {Object} filterConditions - Filter conditions
@@ -77,7 +79,7 @@ class StaffQueryBuilder {
   static buildComplexStaffQuery(clientId, options, filterConditions) {
     const { 
       page, limit, search, searchField, searchType, status, orderBy, orderDirection,
-      salaryField, minSalary, maxSalary, currency, deviceFilter
+      salaryField, minSalary, maxSalary, currency, deviceFilter, projectsFilter
     } = options;
     const offset = (page - 1) * limit;
 
@@ -149,17 +151,22 @@ class StaffQueryBuilder {
       }
     }
 
+    // NEW: Build project count filter condition
+    let projectsCondition = '';
+    if (projectsFilter && projectsFilter !== 'all') {
+      const projectsFilterSQL = QueryHelpers.buildProjectCountFilterCondition(projectsFilter);
+      if (projectsFilterSQL) {
+        projectsCondition = `AND (${projectsFilterSQL})`;
+      }
+    }
+
     // Determine JOIN strategy based on device filter
     let deviceJoin = '';
     if (deviceFilter === 'none') {
-      // For "none" filter, we don't need to join the notification tokens table
-      // because we use NOT EXISTS subquery
       deviceJoin = '';
     } else if (deviceFilter === 'android' || deviceFilter === 'ios') {
-      // For specific device types, we need INNER JOIN to ensure device exists
       deviceJoin = 'INNER JOIN user_notification_tokens unt ON unt.user_id = cu.user_id';
     } else {
-      // For "all" or no device filter, use LEFT JOIN
       deviceJoin = 'LEFT JOIN user_notification_tokens unt ON unt.user_id = cu.user_id';
     }
 
@@ -183,7 +190,7 @@ class StaffQueryBuilder {
         break;
     }
 
-    // Build the complete raw query with proper JOIN strategy
+    // Build the complete raw query
     const rawQuery = `
       SELECT
         cu.staff_id,
@@ -248,12 +255,13 @@ class StaffQueryBuilder {
       ${combinationalCondition}
       ${salaryCondition}
       ${deviceCondition}
+      ${projectsCondition}
       
       ${orderClause}
       LIMIT :limit OFFSET :offset
     `;
 
-    // Build count query with same JOIN strategy
+    // Build count query with same conditions
     const countQuery = `
       SELECT COUNT(DISTINCT cu.staff_id) as count
       FROM client_users cu
@@ -269,6 +277,7 @@ class StaffQueryBuilder {
       ${combinationalCondition}
       ${salaryCondition}
       ${deviceCondition}
+      ${projectsCondition}
     `;
 
     // Prepare replacements
@@ -374,7 +383,7 @@ class StaffQueryBuilder {
   }
 
   /**
-   * FIXED: Build batch queries for related data including project counts (using raw SQL)
+   * Build batch queries for related data
    * @param {Array} userIds - Array of user IDs
    * @returns {Object} Batch query options
    */

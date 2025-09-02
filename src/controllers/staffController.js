@@ -6,7 +6,7 @@ const logger = require('../utils/logger');
 
 class StaffController {
   /**
-   * Get all staff members for a specific client with comprehensive filtering
+   * ENHANCED: Get all staff members for a specific client with comprehensive filtering including project counts
    * GET /api/v1/staffs/client/:clientId
    */
   async getStaffByClient(req, res) {
@@ -35,8 +35,10 @@ class StaffController {
         minSalary: queryOptions.minSalary || null,
         maxSalary: queryOptions.maxSalary || null,
         currency: queryOptions.currency || null,
-        // NEW: Device filter logging
-        deviceFilter: queryOptions.deviceFilter || 'all'
+        // Device filter logging
+        deviceFilter: queryOptions.deviceFilter || 'all',
+        // NEW: Projects filter logging
+        projectsFilter: queryOptions.projectsFilter || 'all'
       });
       
       return successResponse(
@@ -136,7 +138,7 @@ class StaffController {
   }
 
   /**
-   * NEW: Get available device filter options
+   * Get available device filter options
    * GET /api/v1/staffs/device-filter-options
    */
   async getDeviceFilterOptions(req, res) {
@@ -152,6 +154,26 @@ class StaffController {
     } catch (error) {
       logger.error('Error in getDeviceFilterOptions:', error);
       return errorResponse(res, 'Failed to retrieve device filter options', 500);
+    }
+  }
+
+  /**
+   * NEW: Get available project count filter options
+   * GET /api/v1/staffs/project-filter-options
+   */
+  async getProjectFilterOptions(req, res) {
+    try {
+      const projectFilterOptions = StaffValidator.getProjectFilterOptions();
+      
+      return successResponse(
+        res,
+        'Project filter options retrieved successfully',
+        projectFilterOptions,
+        200
+      );
+    } catch (error) {
+      logger.error('Error in getProjectFilterOptions:', error);
+      return errorResponse(res, 'Failed to retrieve project filter options', 500);
     }
   }
 

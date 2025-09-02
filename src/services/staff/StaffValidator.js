@@ -25,7 +25,7 @@ class StaffValidator {
   }
 
   /**
-   * Validate and sanitize query options with enhanced search, combinational filters, salary filters, and device filters
+   * ENHANCED: Validate and sanitize query options with project count filters
    * @param {Object} options - Query options
    * @returns {Object} Validated options
    */
@@ -48,8 +48,10 @@ class StaffValidator {
       minSalary = null,
       maxSalary = null,
       currency = null,
-      // NEW: Device filter parameter
-      deviceFilter = 'all'
+      // Device filter parameter
+      deviceFilter = 'all',
+      // NEW: Project count filter parameter
+      projectsFilter = 'all'
     } = options;
 
     // Validate pagination
@@ -130,9 +132,13 @@ class StaffValidator {
       ? currency.toUpperCase()
       : null;
 
-    // NEW: Validate device filter parameter
+    // Validate device filter parameter
     const validDeviceFilter = Object.values(STAFF_CONSTANTS.COMBINATIONAL_FILTERS.DEVICE_FILTERS)
       .includes(deviceFilter) ? deviceFilter : 'all';
+
+    // NEW: Validate projects filter parameter
+    const validProjectsFilter = Object.values(STAFF_CONSTANTS.COMBINATIONAL_FILTERS.PROJECT_FILTERS)
+      .includes(projectsFilter) ? projectsFilter : 'all';
 
     return {
       page: validatedPage,
@@ -152,8 +158,10 @@ class StaffValidator {
       minSalary: validMinSalary,
       maxSalary: validMaxSalary,
       currency: validCurrency,
-      // NEW: Device filter
-      deviceFilter: validDeviceFilter
+      // Device filter
+      deviceFilter: validDeviceFilter,
+      // NEW: Projects filter
+      projectsFilter: validProjectsFilter
     };
   }
 
@@ -229,7 +237,7 @@ class StaffValidator {
   }
 
   /**
-   * NEW: Get available device filter options
+   * Get available device filter options
    * @returns {Object} Available device filter options
    */
   static getDeviceFilterOptions() {
@@ -247,6 +255,30 @@ class StaffValidator {
         noDevice: 'deviceFilter=none',
         combinedWithOt: 'deviceFilter=android&otFilter=enabled',
         combinedWithSalary: 'deviceFilter=ios&salaryField=ctc&minSalary=80000'
+      }
+    };
+  }
+
+  /**
+   * NEW: Get available project count filter options
+   * @returns {Object} Available project filter options
+   */
+  static getProjectFilterOptions() {
+    return {
+      projectFilters: Object.values(STAFF_CONSTANTS.COMBINATIONAL_FILTERS.PROJECT_FILTERS),
+      descriptions: {
+        single: 'Staff working on exactly one project',
+        multi: 'Staff working on multiple projects (more than 1)',
+        none: 'Staff not assigned to any projects',
+        all: 'All staff regardless of project count'
+      },
+      examples: {
+        singleProject: 'projectsFilter=single',
+        multipleProjects: 'projectsFilter=multi',
+        noProjects: 'projectsFilter=none',
+        combinedWithOt: 'projectsFilter=multi&otFilter=enabled',
+        combinedWithDevice: 'projectsFilter=single&deviceFilter=android',
+        complexCombination: 'projectsFilter=multi&faceFilter=registered&salaryField=ctc&minSalary=100000'
       }
     };
   }

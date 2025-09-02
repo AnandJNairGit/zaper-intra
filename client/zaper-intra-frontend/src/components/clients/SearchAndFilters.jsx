@@ -1,7 +1,7 @@
 // src/components/clients/SearchAndFilters.jsx
 import React, { useState } from 'react';
 import Select from 'react-select';
-import { Search, Filter, ChevronDown, ChevronUp, UserCheck, Clock, Eye, DollarSign, Smartphone } from 'lucide-react';
+import { Search, Filter, ChevronDown, ChevronUp, UserCheck, Clock, Eye, DollarSign, Smartphone, Briefcase } from 'lucide-react';
 
 const SearchAndFilters = ({
   filters,
@@ -53,6 +53,14 @@ const SearchAndFilters = ({
     { value: 'none', label: 'No Device Registered' }
   ];
 
+  // Projects filter options
+  const projectsFilterOptions = [
+    { value: '', label: 'All Projects' },
+    { value: 'multi', label: 'Multi Projects' },
+    { value: 'single', label: 'Single Project' },
+    { value: 'none', label: 'No Projects' }
+  ];
+
   const currencyOptions = [
     { value: '', label: 'Any Currency' },
     ...filterOptions.currencies.map(currency => ({
@@ -102,6 +110,7 @@ const SearchAndFilters = ({
                              filters.selectedOtFilter || 
                              filters.selectedFaceFilter || 
                              filters.selectedDeviceFilter ||
+                             filters.selectedProjectsFilter ||
                              filters.minSalary || 
                              filters.maxSalary;
 
@@ -170,6 +179,22 @@ const SearchAndFilters = ({
             onChange={(value) => updateFilters({ selectedStatus: value })}
             options={statusOptions}
             placeholder="All Staff"
+            isClearable
+            styles={selectStyles}
+          />
+        </div>
+
+        {/* Projects Filter */}
+        <div className="min-w-[160px]">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            <Briefcase className="inline w-4 h-4 mr-1" />
+            Projects
+          </label>
+          <Select
+            value={projectsFilterOptions.find(option => option.value === filters.selectedProjectsFilter)}
+            onChange={(value) => updateFilters({ selectedProjectsFilter: value?.value || '' })}
+            options={projectsFilterOptions}
+            placeholder="All Projects"
             isClearable
             styles={selectStyles}
           />

@@ -23,6 +23,7 @@ const ClientStaffTable = ({ clientId, className = '' }) => {
     selectedOtFilter: null,
     selectedFaceFilter: null,
     selectedDeviceFilter: null, // Added device filter
+    selectedProjectsFilter: '', // Added projects filter
     selectedStatus: null,
     // Salary
     selectedSalaryField: 'basic_salary',
@@ -87,6 +88,10 @@ const ClientStaffTable = ({ clientId, className = '' }) => {
       params.deviceFilter = filters.selectedDeviceFilter.value;
     }
 
+    if (filters.selectedProjectsFilter) {
+      params.projectsFilter = filters.selectedProjectsFilter;
+    }
+
     if (filters.selectedStatus?.value) {
       params.status = filters.selectedStatus.value;
     }
@@ -120,6 +125,7 @@ const ClientStaffTable = ({ clientId, className = '' }) => {
       selectedOtFilter: null,
       selectedFaceFilter: null,
       selectedDeviceFilter: null, // Reset device filter
+      selectedProjectsFilter: '', // Reset projects filter
       selectedStatus: null,
       selectedSalaryField: 'basic_salary',
       minSalary: '',
@@ -139,6 +145,7 @@ const ClientStaffTable = ({ clientId, className = '' }) => {
            filters.selectedOtFilter ||
            filters.selectedFaceFilter ||
            filters.selectedDeviceFilter || // Include device filter
+           filters.selectedProjectsFilter || // Include projects filter
            filters.selectedStatus ||
            filters.minSalary ||
            filters.maxSalary ||
