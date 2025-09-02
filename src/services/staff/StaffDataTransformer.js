@@ -36,7 +36,7 @@ class StaffDataTransformer {
   }
 
   /**
-   * Build comprehensive staff object including accommodation details and filter flags
+   * ENHANCED: Build comprehensive staff object including photo URL and all filter flags
    * @param {Object} staffData - Staff data
    * @param {Object} user - User data
    * @param {Object} role - Role data
@@ -56,11 +56,16 @@ class StaffDataTransformer {
     // Calculate face registration status
     const isFaceRegistered = photos.length > 0;
 
-    // NEW: Calculate device information
+    // Calculate device information
     const deviceTypes = [...new Set(tokens.map(t => t.device_type))];
     const hasAndroid = deviceTypes.includes('android');
     const hasIOS = deviceTypes.includes('ios');
     const hasNoDevice = tokens.length === 0;
+
+    // NEW: Extract photo URL - prioritize face photos, fallback to any photo
+    const facePhoto = photos.find(p => p.photo_type === 'face');
+    const anyPhoto = photos.length > 0 ? photos[0] : null;
+    const photoUrl = facePhoto?.photo_url || anyPhoto?.photo_url || null;
 
     return {
       // Basic Information
@@ -68,6 +73,9 @@ class StaffDataTransformer {
       name: user.display_name || user.user_name || null,
       username: user.user_name || null,
       code: staffData.code || null,
+      
+      // NEW: Photo URL
+      photo_url: photoUrl,
       
       // Client Information
       client_id: clientInfo.client_id || null,
@@ -90,7 +98,7 @@ class StaffDataTransformer {
         is_ot_eligible: isOtEligible,
         is_face_registered: isFaceRegistered,
         combinational_type: this.getCombinationalType(isOtEligible, isFaceRegistered),
-        // NEW: Device filter flags
+        // Device filter flags
         has_android: hasAndroid,
         has_ios: hasIOS,
         has_no_device: hasNoDevice,
@@ -126,11 +134,20 @@ class StaffDataTransformer {
       reportees: jobProfile.reportees || null,
       profile_info: jobProfile.profileinfo || null,
       
-      // Face Registration
+      // Face Registration Details
       is_face_registered: isFaceRegistered,
       total_photos: photos.length,
       face_photos_count: photos.filter(p => p.photo_type === 'face').length,
       vector_saved_photos: photos.filter(p => p.saved_to_vector).length,
+      // NEW: Enhanced photo information
+      photo_details: {
+        has_photo: photoUrl !== null,
+        photo_url: photoUrl,
+        face_photo_available: facePhoto !== null,
+        face_photo_url: facePhoto?.photo_url || null,
+        total_photos: photos.length,
+        photo_types: [...new Set(photos.map(p => p.photo_type))]
+      },
       
       // Benefits and Eligibility
       sick_leave_eligibility: role.sick_leave_eligibility || false,
@@ -182,7 +199,7 @@ class StaffDataTransformer {
   }
 
   /**
-   * NEW: Get device filter type based on device ownership
+   * Get device filter type based on device ownership
    * @param {boolean} hasAndroid - Has Android device
    * @param {boolean} hasIOS - Has iOS device
    * @param {boolean} hasNoDevice - Has no devices
@@ -262,7 +279,7 @@ class StaffDataTransformer {
   }
 
   /**
-   * Build summary statistics with combinational filter counts and device statistics
+   * ENHANCED: Build summary statistics with photo information
    * @param {Array} staffDetails - Formatted staff details
    * @param {Object} clientInfo - Client information
    * @param {number} totalCount - Total staff count
@@ -289,7 +306,7 @@ class StaffDataTransformer {
         all_without_face: staffDetails.filter(s => !s.filter_flags.is_face_registered).length
       },
 
-      // NEW: Device statistics
+      // Device statistics
       device_stats: {
         android_users: staffDetails.filter(s => s.filter_flags.has_android).length,
         ios_users: staffDetails.filter(s => s.filter_flags.has_ios).length,
@@ -297,6 +314,16 @@ class StaffDataTransformer {
         total_devices: staffDetails.reduce((sum, s) => sum + s.registered_devices, 0),
         users_with_devices: staffDetails.filter(s => s.registered_devices > 0).length,
         users_with_both_platforms: staffDetails.filter(s => s.filter_flags.has_android && s.filter_flags.has_ios).length
+      },
+
+      // NEW: Photo statistics
+      photo_stats: {
+        users_with_photos: staffDetails.filter(s => s.photo_url !== null).length,
+        users_without_photos: staffDetails.filter(s => s.photo_url === null).length,
+        users_with_face_photos: staffDetails.filter(s => s.photo_details.face_photo_available).length,
+        total_photos: staffDetails.reduce((sum, s) => sum + s.total_photos, 0),
+        average_photos_per_user: totalCount > 0 ? 
+          Math.round((staffDetails.reduce((sum, s) => sum + s.total_photos, 0) / totalCount) * 100) / 100 : 0
       },
       
       client_info: {

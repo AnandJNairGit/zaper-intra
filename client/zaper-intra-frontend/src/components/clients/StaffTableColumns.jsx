@@ -9,10 +9,63 @@ import {
   Smartphone,
   MapPin,
   Home,
-  AlertTriangle
+  AlertTriangle,
+  Camera
 } from 'lucide-react';
 
 export const getStaffTableColumns = () => [
+  // NEW: Photo Column
+  {
+    key: 'photo',
+    title: 'Photo',
+    width: '80px',
+    render: (_, item) => (
+      <div className="flex items-center justify-center">
+        {item.photo_url || item.photo_details?.photo_url ? (
+          <img
+            src={item.photo_url || item.photo_details?.photo_url}
+            alt={`${item.name}'s photo`}
+            className="w-10 h-10 rounded-full object-cover border-2 border-gray-200"
+            onError={(e) => {
+              const initials = item.name
+                .split(' ')
+                .map(name => name.charAt(0))
+                .join('')
+                .substring(0, 2)
+                .toUpperCase();
+              e.target.outerHTML = `<div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 text-white text-sm font-semibold flex items-center justify-center">${initials}</div>`;
+            }}
+          />
+        ) : (
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 text-white text-sm font-semibold flex items-center justify-center">
+            {item.name
+              .split(' ')
+              .map(name => name.charAt(0))
+              .join('')
+              .substring(0, 2)
+              .toUpperCase()}
+          </div>
+        )}
+      </div>
+    )
+  },
+
+  // NEW: Total Photos Column
+  {
+    key: 'total_photos',
+    title: 'Photos',
+    width: '100px',
+    render: (_, item) => (
+      <div className="flex items-center justify-center space-x-1">
+        <Camera className="w-4 h-4 text-gray-500" />
+        <span className="text-sm font-medium">
+          {item.photo_details?.total_photos || 0}
+        </span>
+      </div>
+    )
+  },
+
+  // ALL ORIGINAL COLUMNS BELOW - UNCHANGED
   {
     key: 'staff_details',
     title: 'Staff Details',

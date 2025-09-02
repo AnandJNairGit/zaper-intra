@@ -68,7 +68,7 @@ class StaffQueryBuilder {
   }
 
   /**
-   * FIXED: Build complex staff query with combinational, salary, and device filters using raw SQL
+   * Build complex staff query with combinational, salary, and device filters using raw SQL
    * @param {number} clientId - Client ID
    * @param {Object} options - Query options
    * @param {Object} filterConditions - Filter conditions
@@ -140,7 +140,7 @@ class StaffQueryBuilder {
       salaryCondition = QueryHelpers.buildSalaryRangeSQL(salaryField, minSalary, maxSalary, currency);
     }
 
-    // FIXED: Build device filter condition
+    // Build device filter condition
     let deviceCondition = '';
     if (deviceFilter && deviceFilter !== 'all') {
       const deviceFilterSQL = QueryHelpers.buildDeviceFilterCondition(deviceFilter);
@@ -183,7 +183,7 @@ class StaffQueryBuilder {
         break;
     }
 
-    // FIXED: Build the complete raw query with proper JOIN strategy
+    // Build the complete raw query with proper JOIN strategy
     const rawQuery = `
       SELECT
         cu.staff_id,
@@ -253,7 +253,7 @@ class StaffQueryBuilder {
       LIMIT :limit OFFSET :offset
     `;
 
-    // FIXED: Build count query with same JOIN strategy
+    // Build count query with same JOIN strategy
     const countQuery = `
       SELECT COUNT(DISTINCT cu.staff_id) as count
       FROM client_users cu
@@ -374,7 +374,7 @@ class StaffQueryBuilder {
   }
 
   /**
-   * Build batch queries for related data
+   * ENHANCED: Build batch queries for related data including photo_url
    * @param {Array} userIds - Array of user IDs
    * @returns {Object} Batch query options
    */
@@ -386,7 +386,8 @@ class StaffQueryBuilder {
         model: UserPhoto,
         options: {
           where: { user_id: { [Op.in]: userIds } },
-          attributes: ['user_id', 'photo_id', 'photo_type', 'saved_to_vector']
+          // ENHANCED: Include photo_url in the attributes
+          attributes: ['user_id', 'photo_id', 'photo_type', 'saved_to_vector', 'photo_url']
         }
       },
       userJobProfiles: {
