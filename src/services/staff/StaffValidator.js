@@ -25,7 +25,7 @@ class StaffValidator {
   }
 
   /**
-   * Validate and sanitize query options with enhanced search, combinational filters, and salary filters
+   * Validate and sanitize query options with enhanced search, combinational filters, salary filters, and device filters
    * @param {Object} options - Query options
    * @returns {Object} Validated options
    */
@@ -43,11 +43,13 @@ class StaffValidator {
       otFilter = 'all',
       faceFilter = 'all',
       combinedFilter = null,
-      // NEW: Salary filter parameters
+      // Salary filter parameters
       salaryField = null,
       minSalary = null,
       maxSalary = null,
-      currency = null
+      currency = null,
+      // NEW: Device filter parameter
+      deviceFilter = 'all'
     } = options;
 
     // Validate pagination
@@ -94,7 +96,7 @@ class StaffValidator {
       Object.values(STAFF_CONSTANTS.COMBINATIONAL_FILTERS.COMBINED_FILTERS)
       .includes(combinedFilter) ? combinedFilter : null;
 
-    // NEW: Validate salary filter parameters
+    // Validate salary filter parameters
     const validSalaryField = salaryField && 
       STAFF_CONSTANTS.SALARY_FILTERS.FIELDS.includes(salaryField) 
       ? salaryField 
@@ -128,6 +130,10 @@ class StaffValidator {
       ? currency.toUpperCase()
       : null;
 
+    // NEW: Validate device filter parameter
+    const validDeviceFilter = Object.values(STAFF_CONSTANTS.COMBINATIONAL_FILTERS.DEVICE_FILTERS)
+      .includes(deviceFilter) ? deviceFilter : 'all';
+
     return {
       page: validatedPage,
       limit: validatedLimit,
@@ -141,11 +147,13 @@ class StaffValidator {
       otFilter: validOtFilter,
       faceFilter: validFaceFilter,
       combinedFilter: validCombinedFilter,
-      // NEW: Salary filters
+      // Salary filters
       salaryField: validSalaryField,
       minSalary: validMinSalary,
       maxSalary: validMaxSalary,
-      currency: validCurrency
+      currency: validCurrency,
+      // NEW: Device filter
+      deviceFilter: validDeviceFilter
     };
   }
 
@@ -199,7 +207,7 @@ class StaffValidator {
   }
 
   /**
-   * NEW: Get available salary filter options
+   * Get available salary filter options
    * @returns {Object} Available salary filter options
    */
   static getSalaryFilterOptions() {
@@ -216,6 +224,29 @@ class StaffValidator {
         basicUsage: 'salaryField=basic_salary&minSalary=50000&maxSalary=100000',
         withCurrency: 'salaryField=ctc&minSalary=80000&currency=USD',
         combined: 'salaryField=take_home&minSalary=40000&combinedFilter=ot_with_face'
+      }
+    };
+  }
+
+  /**
+   * NEW: Get available device filter options
+   * @returns {Object} Available device filter options
+   */
+  static getDeviceFilterOptions() {
+    return {
+      deviceFilters: Object.values(STAFF_CONSTANTS.COMBINATIONAL_FILTERS.DEVICE_FILTERS),
+      descriptions: {
+        android: 'Staff with Android devices',
+        ios: 'Staff with iOS devices',
+        none: 'Staff with no registered devices',
+        all: 'All staff regardless of device type'
+      },
+      examples: {
+        androidOnly: 'deviceFilter=android',
+        iosOnly: 'deviceFilter=ios',
+        noDevice: 'deviceFilter=none',
+        combinedWithOt: 'deviceFilter=android&otFilter=enabled',
+        combinedWithSalary: 'deviceFilter=ios&salaryField=ctc&minSalary=80000'
       }
     };
   }

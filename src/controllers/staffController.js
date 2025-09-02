@@ -6,7 +6,7 @@ const logger = require('../utils/logger');
 
 class StaffController {
   /**
-   * Get all staff members for a specific client with advanced search, combinational filters, and salary filters
+   * Get all staff members for a specific client with comprehensive filtering
    * GET /api/v1/staffs/client/:clientId
    */
   async getStaffByClient(req, res) {
@@ -30,11 +30,13 @@ class StaffController {
         otFilter: queryOptions.otFilter || 'all',
         faceFilter: queryOptions.faceFilter || 'all',
         combinedFilter: queryOptions.combinedFilter || null,
-        // NEW: Salary filter logging
+        // Salary filter logging
         salaryField: queryOptions.salaryField || null,
         minSalary: queryOptions.minSalary || null,
         maxSalary: queryOptions.maxSalary || null,
-        currency: queryOptions.currency || null
+        currency: queryOptions.currency || null,
+        // NEW: Device filter logging
+        deviceFilter: queryOptions.deviceFilter || 'all'
       });
       
       return successResponse(
@@ -114,7 +116,7 @@ class StaffController {
   }
 
   /**
-   * NEW: Get available salary filter options
+   * Get available salary filter options
    * GET /api/v1/staffs/salary-filter-options
    */
   async getSalaryFilterOptions(req, res) {
@@ -130,6 +132,26 @@ class StaffController {
     } catch (error) {
       logger.error('Error in getSalaryFilterOptions:', error);
       return errorResponse(res, 'Failed to retrieve salary filter options', 500);
+    }
+  }
+
+  /**
+   * NEW: Get available device filter options
+   * GET /api/v1/staffs/device-filter-options
+   */
+  async getDeviceFilterOptions(req, res) {
+    try {
+      const deviceFilterOptions = StaffValidator.getDeviceFilterOptions();
+      
+      return successResponse(
+        res,
+        'Device filter options retrieved successfully',
+        deviceFilterOptions,
+        200
+      );
+    } catch (error) {
+      logger.error('Error in getDeviceFilterOptions:', error);
+      return errorResponse(res, 'Failed to retrieve device filter options', 500);
     }
   }
 

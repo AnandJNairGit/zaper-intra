@@ -56,6 +56,12 @@ class StaffDataTransformer {
     // Calculate face registration status
     const isFaceRegistered = photos.length > 0;
 
+    // NEW: Calculate device information
+    const deviceTypes = [...new Set(tokens.map(t => t.device_type))];
+    const hasAndroid = deviceTypes.includes('android');
+    const hasIOS = deviceTypes.includes('ios');
+    const hasNoDevice = tokens.length === 0;
+
     return {
       // Basic Information
       staff_id: staffData.staff_id,
@@ -79,11 +85,17 @@ class StaffDataTransformer {
       designation: role.role_name || null,
       job_profile_name: jobProfile.jobProfile?.job_profile_name || null,
       
-      // NEW: Combinational Filter Flags
+      // Enhanced Filter Flags
       filter_flags: {
         is_ot_eligible: isOtEligible,
         is_face_registered: isFaceRegistered,
-        combinational_type: this.getCombinationalType(isOtEligible, isFaceRegistered)
+        combinational_type: this.getCombinationalType(isOtEligible, isFaceRegistered),
+        // NEW: Device filter flags
+        has_android: hasAndroid,
+        has_ios: hasIOS,
+        has_no_device: hasNoDevice,
+        device_types: deviceTypes,
+        device_filter_type: this.getDeviceFilterType(hasAndroid, hasIOS, hasNoDevice)
       },
       
       // Overtime Information
@@ -147,7 +159,7 @@ class StaffDataTransformer {
       
       // Device Information
       registered_devices: tokens.length,
-      device_types: [...new Set(tokens.map(t => t.device_type))],
+      device_types: deviceTypes,
       last_device_registration: this.getLastDeviceRegistration(tokens),
       
       // Metadata
@@ -156,7 +168,7 @@ class StaffDataTransformer {
   }
 
   /**
-   * NEW: Get combinational type based on OT and face registration status
+   * Get combinational type based on OT and face registration status
    * @param {boolean} isOtEligible - Is overtime eligible
    * @param {boolean} isFaceRegistered - Is face registered
    * @returns {string} Combinational type
@@ -166,6 +178,21 @@ class StaffDataTransformer {
     if (isOtEligible && !isFaceRegistered) return 'ot_without_face';
     if (!isOtEligible && isFaceRegistered) return 'non_ot_with_face';
     if (!isOtEligible && !isFaceRegistered) return 'non_ot_without_face';
+    return 'unknown';
+  }
+
+  /**
+   * NEW: Get device filter type based on device ownership
+   * @param {boolean} hasAndroid - Has Android device
+   * @param {boolean} hasIOS - Has iOS device
+   * @param {boolean} hasNoDevice - Has no devices
+   * @returns {string} Device filter type
+   */
+  static getDeviceFilterType(hasAndroid, hasIOS, hasNoDevice) {
+    if (hasNoDevice) return 'none';
+    if (hasAndroid && hasIOS) return 'both';
+    if (hasAndroid) return 'android';
+    if (hasIOS) return 'ios';
     return 'unknown';
   }
 
@@ -235,7 +262,7 @@ class StaffDataTransformer {
   }
 
   /**
-   * Build summary statistics with combinational filter counts
+   * Build summary statistics with combinational filter counts and device statistics
    * @param {Array} staffDetails - Formatted staff details
    * @param {Object} clientInfo - Client information
    * @param {number} totalCount - Total staff count
@@ -250,7 +277,7 @@ class StaffDataTransformer {
       ot_applicable_count: staffDetails.filter(s => s.ot_applicable).length,
       staff_with_accommodation: staffDetails.filter(s => s.accommodation_details.length > 0).length,
       
-      // NEW: Combinational filter statistics
+      // Combinational filter statistics
       combinational_stats: {
         ot_with_face: staffDetails.filter(s => s.filter_flags.combinational_type === 'ot_with_face').length,
         ot_without_face: staffDetails.filter(s => s.filter_flags.combinational_type === 'ot_without_face').length,
@@ -260,6 +287,16 @@ class StaffDataTransformer {
         all_non_ot: staffDetails.filter(s => !s.filter_flags.is_ot_eligible).length,
         all_with_face: staffDetails.filter(s => s.filter_flags.is_face_registered).length,
         all_without_face: staffDetails.filter(s => !s.filter_flags.is_face_registered).length
+      },
+
+      // NEW: Device statistics
+      device_stats: {
+        android_users: staffDetails.filter(s => s.filter_flags.has_android).length,
+        ios_users: staffDetails.filter(s => s.filter_flags.has_ios).length,
+        no_device_users: staffDetails.filter(s => s.filter_flags.has_no_device).length,
+        total_devices: staffDetails.reduce((sum, s) => sum + s.registered_devices, 0),
+        users_with_devices: staffDetails.filter(s => s.registered_devices > 0).length,
+        users_with_both_platforms: staffDetails.filter(s => s.filter_flags.has_android && s.filter_flags.has_ios).length
       },
       
       client_info: {

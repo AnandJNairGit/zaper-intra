@@ -11,7 +11,7 @@ const QueryHelpers = require('../../utils/queryHelpers');
 
 class StaffQueryBuilder {
   /**
-   * Build main staff query options with enhanced search, combinational filters, and salary filters
+   * Build main staff query options with enhanced search, combinational filters, salary filters, and device filters
    * @param {number} clientId - Client ID
    * @param {Object} options - Query options
    * @returns {Object} Sequelize query options
@@ -19,19 +19,20 @@ class StaffQueryBuilder {
   static buildStaffQuery(clientId, options) {
     const { 
       page, limit, search, searchField, searchType, status, orderBy, orderDirection,
-      otFilter, faceFilter, combinedFilter, salaryField, minSalary, maxSalary, currency
+      otFilter, faceFilter, combinedFilter, salaryField, minSalary, maxSalary, currency, deviceFilter
     } = options;
     
     const offset = (page - 1) * limit;
 
-    // Check if we need complex filtering (combinational or salary filters)
+    // Check if we need complex filtering (combinational, salary, or device filters)
     const filterConditions = QueryHelpers.buildCombinationalFilterConditions(
       otFilter, faceFilter, combinedFilter
     );
 
     const hasSalaryFilter = salaryField && (minSalary !== null || maxSalary !== null);
+    const hasDeviceFilter = deviceFilter && deviceFilter !== 'all';
 
-    if (filterConditions.requiresComplexQuery || hasSalaryFilter) {
+    if (filterConditions.requiresComplexQuery || hasSalaryFilter || hasDeviceFilter) {
       return this.buildComplexStaffQuery(clientId, options, filterConditions);
     } else {
       return this.buildSimpleStaffQuery(clientId, options);
@@ -39,7 +40,7 @@ class StaffQueryBuilder {
   }
 
   /**
-   * Build simple staff query for basic filtering (no combinational or salary filters)
+   * Build simple staff query for basic filtering (no combinational, salary, or device filters)
    * @param {number} clientId - Client ID
    * @param {Object} options - Query options
    * @returns {Object} Sequelize query options
@@ -67,7 +68,7 @@ class StaffQueryBuilder {
   }
 
   /**
-   * Build complex staff query with combinational and salary filters using raw SQL
+   * FIXED: Build complex staff query with combinational, salary, and device filters using raw SQL
    * @param {number} clientId - Client ID
    * @param {Object} options - Query options
    * @param {Object} filterConditions - Filter conditions
@@ -76,7 +77,7 @@ class StaffQueryBuilder {
   static buildComplexStaffQuery(clientId, options, filterConditions) {
     const { 
       page, limit, search, searchField, searchType, status, orderBy, orderDirection,
-      salaryField, minSalary, maxSalary, currency
+      salaryField, minSalary, maxSalary, currency, deviceFilter
     } = options;
     const offset = (page - 1) * limit;
 
@@ -133,10 +134,33 @@ class StaffQueryBuilder {
       combinationalCondition = `AND (${conditions.join(' AND ')})`;
     }
 
-    // NEW: Build salary filter condition
+    // Build salary filter condition
     let salaryCondition = '';
     if (salaryField) {
       salaryCondition = QueryHelpers.buildSalaryRangeSQL(salaryField, minSalary, maxSalary, currency);
+    }
+
+    // FIXED: Build device filter condition
+    let deviceCondition = '';
+    if (deviceFilter && deviceFilter !== 'all') {
+      const deviceFilterSQL = QueryHelpers.buildDeviceFilterCondition(deviceFilter);
+      if (deviceFilterSQL) {
+        deviceCondition = `AND (${deviceFilterSQL})`;
+      }
+    }
+
+    // Determine JOIN strategy based on device filter
+    let deviceJoin = '';
+    if (deviceFilter === 'none') {
+      // For "none" filter, we don't need to join the notification tokens table
+      // because we use NOT EXISTS subquery
+      deviceJoin = '';
+    } else if (deviceFilter === 'android' || deviceFilter === 'ios') {
+      // For specific device types, we need INNER JOIN to ensure device exists
+      deviceJoin = 'INNER JOIN user_notification_tokens unt ON unt.user_id = cu.user_id';
+    } else {
+      // For "all" or no device filter, use LEFT JOIN
+      deviceJoin = 'LEFT JOIN user_notification_tokens unt ON unt.user_id = cu.user_id';
     }
 
     // Build order clause
@@ -159,7 +183,7 @@ class StaffQueryBuilder {
         break;
     }
 
-    // Build the complete raw query
+    // FIXED: Build the complete raw query with proper JOIN strategy
     const rawQuery = `
       SELECT
         cu.staff_id,
@@ -216,18 +240,20 @@ class StaffQueryBuilder {
       LEFT JOIN client_roles cr ON cr.role_id = cu.role_id
       LEFT JOIN user_salary us ON us.user_id = cu.user_id
       LEFT JOIN user_photos up ON up.user_id = cu.user_id
+      ${deviceJoin}
       
       WHERE cu.client_id = :clientId
       ${statusCondition}
       ${searchCondition}
       ${combinationalCondition}
       ${salaryCondition}
+      ${deviceCondition}
       
       ${orderClause}
       LIMIT :limit OFFSET :offset
     `;
 
-    // Build count query
+    // FIXED: Build count query with same JOIN strategy
     const countQuery = `
       SELECT COUNT(DISTINCT cu.staff_id) as count
       FROM client_users cu
@@ -235,12 +261,14 @@ class StaffQueryBuilder {
       LEFT JOIN client_roles cr ON cr.role_id = cu.role_id
       LEFT JOIN user_salary us ON us.user_id = cu.user_id
       LEFT JOIN user_photos up ON up.user_id = cu.user_id
+      ${deviceFilter === 'none' ? '' : (deviceFilter === 'android' || deviceFilter === 'ios') ? 'INNER JOIN user_notification_tokens unt ON unt.user_id = cu.user_id' : 'LEFT JOIN user_notification_tokens unt ON unt.user_id = cu.user_id'}
       
       WHERE cu.client_id = :clientId
       ${statusCondition}
       ${searchCondition}
       ${combinationalCondition}
       ${salaryCondition}
+      ${deviceCondition}
     `;
 
     // Prepare replacements
@@ -266,7 +294,7 @@ class StaffQueryBuilder {
       }
     }
 
-    // NEW: Add salary filter replacements
+    // Add salary filter replacements
     if (salaryField) {
       if (minSalary !== null && minSalary !== undefined) {
         replacements.minSalary = minSalary;

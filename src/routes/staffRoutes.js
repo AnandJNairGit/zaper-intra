@@ -21,12 +21,20 @@ router.get('/search-fields', staffController.getSearchFields);
 router.get('/filter-options', staffController.getFilterOptions);
 
 /**
- * NEW: @route   GET /api/v1/staffs/salary-filter-options
+ * @route   GET /api/v1/staffs/salary-filter-options
  * @desc    Get available salary filter options and supported currencies
  * @access  Public (internal use)
  * @returns Available salary fields, currencies, and usage examples
  */
 router.get('/salary-filter-options', staffController.getSalaryFilterOptions);
+
+/**
+ * NEW: @route   GET /api/v1/staffs/device-filter-options
+ * @desc    Get available device filter options
+ * @access  Public (internal use)
+ * @returns Available device filter types and usage examples
+ */
+router.get('/device-filter-options', staffController.getDeviceFilterOptions);
 
 /**
  * @route   GET /api/v1/staffs/client/:clientId
@@ -36,8 +44,10 @@ router.get('/salary-filter-options', staffController.getSalaryFilterOptions);
  * @query   Basic: page, limit, search, searchField, searchType, status, orderBy, orderDirection
  * @query   Combinational: otFilter, faceFilter, combinedFilter
  * @query   Salary: salaryField, minSalary, maxSalary, currency
- * @example GET /api/v1/staffs/client/1?salaryField=basic_salary&minSalary=50000&maxSalary=100000
- * @example GET /api/v1/staffs/client/1?combinedFilter=ot_with_face&salaryField=ctc&minSalary=80000
+ * @query   Device: deviceFilter (NEW)
+ * @example GET /api/v1/staffs/client/1?deviceFilter=android
+ * @example GET /api/v1/staffs/client/1?deviceFilter=ios&otFilter=enabled
+ * @example GET /api/v1/staffs/client/1?deviceFilter=none&faceFilter=registered
  */
 router.get('/client/:clientId', staffController.getStaffByClient);
 

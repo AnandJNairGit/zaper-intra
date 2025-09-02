@@ -48,6 +48,14 @@ const STAFF_CONSTANTS = {
       ALL: 'all'
     },
     
+    // NEW: Device type filter options
+    DEVICE_FILTERS: {
+      ANDROID: 'android',
+      IOS: 'ios',
+      NO_DEVICE: 'none',
+      ALL: 'all'
+    },
+    
     // Predefined combined filter options
     COMBINED_FILTERS: {
       OT_WITH_FACE: 'ot_with_face',
@@ -62,7 +70,7 @@ const STAFF_CONSTANTS = {
     }
   },
   
-  // NEW: Salary filtration options
+  // Salary filtration options
   SALARY_FILTERS: {
     FIELDS: ['take_home', 'basic_salary', 'ctc'],
     FIELD_MAPPING: {

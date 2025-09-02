@@ -160,7 +160,27 @@ class QueryHelpers {
   }
 
   /**
-   * NEW: Build salary range filter conditions
+   * FIXED: Build device type filter condition using NOT EXISTS for "none"
+   * @param {string} deviceFilter - Device filter: 'android', 'ios', 'none', 'all'
+   * @returns {string|null} SQL condition for device filtering
+   */
+  static buildDeviceFilterCondition(deviceFilter) {
+    switch (deviceFilter) {
+      case 'android':
+        return 'unt.device_type = \'android\'';
+      case 'ios':
+        return 'unt.device_type = \'ios\'';
+      case 'none':
+        // FIXED: Use NOT EXISTS instead of checking for NULL id
+        return 'NOT EXISTS (SELECT 1 FROM user_notification_tokens unt2 WHERE unt2.user_id = cu.user_id)';
+      case 'all':
+      default:
+        return null;
+    }
+  }
+
+  /**
+   * Build salary range filter conditions
    * @param {string} salaryField - Salary field to filter on ('take_home', 'basic_salary', 'ctc')
    * @param {number} minSalary - Minimum salary value
    * @param {number} maxSalary - Maximum salary value
@@ -202,7 +222,7 @@ class QueryHelpers {
   }
 
   /**
-   * NEW: Build SQL condition for salary range in raw queries
+   * Build SQL condition for salary range in raw queries
    * @param {string} salaryField - Salary field to filter on
    * @param {number} minSalary - Minimum salary value
    * @param {number} maxSalary - Maximum salary value
