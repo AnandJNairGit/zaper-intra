@@ -13,7 +13,8 @@ class StaffDataTransformer {
       salariesMap, 
       tokensMap, 
       accommodationsMap, 
-      communicationDetailsMap 
+      communicationDetailsMap,
+      projectsMap
     } = relatedData;
 
     return rawStaffData.map(staff => {
@@ -27,16 +28,17 @@ class StaffDataTransformer {
       const tokens = tokensMap[user.user_id] || [];
       const accommodations = accommodationsMap[user.user_id] || [];
       const communicationDetails = communicationDetailsMap[user.user_id] || [];
+      const projectData = projectsMap[user.user_id] || {};
 
       return this.buildStaffObject(
         staffData, user, role, clientInfo, photos, 
-        jobProfile, salary, tokens, accommodations, communicationDetails
+        jobProfile, salary, tokens, accommodations, communicationDetails, projectData
       );
     });
   }
 
   /**
-   * ENHANCED: Build comprehensive staff object including photo URL and all filter flags
+   * ENHANCED: Build comprehensive staff object including project count
    * @param {Object} staffData - Staff data
    * @param {Object} user - User data
    * @param {Object} role - Role data
@@ -47,9 +49,10 @@ class StaffDataTransformer {
    * @param {Array} tokens - Notification tokens array
    * @param {Array} accommodations - Accommodation details array
    * @param {Array} communicationDetails - Communication details array
+   * @param {Object} projectData - Project count data
    * @returns {Object} Formatted staff object
    */
-  static buildStaffObject(staffData, user, role, clientInfo, photos, jobProfile, salary, tokens, accommodations, communicationDetails) {
+  static buildStaffObject(staffData, user, role, clientInfo, photos, jobProfile, salary, tokens, accommodations, communicationDetails, projectData) {
     // Calculate overtime eligibility
     const isOtEligible = role.use_overtime || salary.use_overtime || false;
     
@@ -62,10 +65,15 @@ class StaffDataTransformer {
     const hasIOS = deviceTypes.includes('ios');
     const hasNoDevice = tokens.length === 0;
 
-    // NEW: Extract photo URL - prioritize face photos, fallback to any photo
+    // Extract photo URL - prioritize face photos, fallback to any photo
     const facePhoto = photos.find(p => p.photo_type === 'face');
     const anyPhoto = photos.length > 0 ? photos[0] : null;
     const photoUrl = facePhoto?.photo_url || anyPhoto?.photo_url || null;
+
+    // NEW: Extract project count
+    const projectCount = projectData && projectData.get 
+      ? parseInt(projectData.get('project_count')) || 0 
+      : 0;
 
     return {
       // Basic Information
@@ -74,8 +82,11 @@ class StaffDataTransformer {
       username: user.user_name || null,
       code: staffData.code || null,
       
-      // NEW: Photo URL
+      // Photo URL
       photo_url: photoUrl,
+      
+      // NEW: Project Information
+      number_of_projects: projectCount,
       
       // Client Information
       client_id: clientInfo.client_id || null,
@@ -103,7 +114,10 @@ class StaffDataTransformer {
         has_ios: hasIOS,
         has_no_device: hasNoDevice,
         device_types: deviceTypes,
-        device_filter_type: this.getDeviceFilterType(hasAndroid, hasIOS, hasNoDevice)
+        device_filter_type: this.getDeviceFilterType(hasAndroid, hasIOS, hasNoDevice),
+        // NEW: Project-related flags
+        has_projects: projectCount > 0,
+        project_engagement_level: this.getProjectEngagementLevel(projectCount)
       },
       
       // Overtime Information
@@ -139,7 +153,7 @@ class StaffDataTransformer {
       total_photos: photos.length,
       face_photos_count: photos.filter(p => p.photo_type === 'face').length,
       vector_saved_photos: photos.filter(p => p.saved_to_vector).length,
-      // NEW: Enhanced photo information
+      // Photo information
       photo_details: {
         has_photo: photoUrl !== null,
         photo_url: photoUrl,
@@ -214,6 +228,19 @@ class StaffDataTransformer {
   }
 
   /**
+   * NEW: Get project engagement level based on project count
+   * @param {number} projectCount - Number of projects
+   * @returns {string} Engagement level
+   */
+  static getProjectEngagementLevel(projectCount) {
+    if (projectCount === 0) return 'none';
+    if (projectCount === 1) return 'low';
+    if (projectCount <= 3) return 'medium';
+    if (projectCount <= 5) return 'high';
+    return 'very_high';
+  }
+
+  /**
    * Format communication details array
    * @param {Array} communicationDetails - Communication details array
    * @returns {Array} Formatted communication details
@@ -279,7 +306,7 @@ class StaffDataTransformer {
   }
 
   /**
-   * ENHANCED: Build summary statistics with photo information
+   * ENHANCED: Build summary statistics with project information
    * @param {Array} staffDetails - Formatted staff details
    * @param {Object} clientInfo - Client information
    * @param {number} totalCount - Total staff count
@@ -316,7 +343,7 @@ class StaffDataTransformer {
         users_with_both_platforms: staffDetails.filter(s => s.filter_flags.has_android && s.filter_flags.has_ios).length
       },
 
-      // NEW: Photo statistics
+      // Photo statistics
       photo_stats: {
         users_with_photos: staffDetails.filter(s => s.photo_url !== null).length,
         users_without_photos: staffDetails.filter(s => s.photo_url === null).length,
@@ -324,6 +351,22 @@ class StaffDataTransformer {
         total_photos: staffDetails.reduce((sum, s) => sum + s.total_photos, 0),
         average_photos_per_user: totalCount > 0 ? 
           Math.round((staffDetails.reduce((sum, s) => sum + s.total_photos, 0) / totalCount) * 100) / 100 : 0
+      },
+
+      // NEW: Project statistics
+      project_stats: {
+        users_with_projects: staffDetails.filter(s => s.number_of_projects > 0).length,
+        users_without_projects: staffDetails.filter(s => s.number_of_projects === 0).length,
+        total_projects: staffDetails.reduce((sum, s) => sum + s.number_of_projects, 0),
+        average_projects_per_user: totalCount > 0 ? 
+          Math.round((staffDetails.reduce((sum, s) => sum + s.number_of_projects, 0) / totalCount) * 100) / 100 : 0,
+        project_engagement_levels: {
+          none: staffDetails.filter(s => s.filter_flags.project_engagement_level === 'none').length,
+          low: staffDetails.filter(s => s.filter_flags.project_engagement_level === 'low').length,
+          medium: staffDetails.filter(s => s.filter_flags.project_engagement_level === 'medium').length,
+          high: staffDetails.filter(s => s.filter_flags.project_engagement_level === 'high').length,
+          very_high: staffDetails.filter(s => s.filter_flags.project_engagement_level === 'very_high').length
+        }
       },
       
       client_info: {

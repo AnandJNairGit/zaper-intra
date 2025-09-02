@@ -4,6 +4,12 @@ const QueryHelpers = require('../../utils/queryHelpers');
 const StaffQueryBuilder = require('./StaffQueryBuilder');
 
 class StaffDataFetcher {
+  /**
+   * Verify client exists
+   * @param {number} clientId - Client ID
+   * @returns {Object} Client data
+   * @throws {Error} If client not found
+   */
   static async verifyClientExists(clientId) {
     const client = await Client.findByPk(clientId, {
       attributes: ['client_id', 'client_name']
@@ -16,6 +22,12 @@ class StaffDataFetcher {
     return client;
   }
 
+  /**
+   * Fetch main staff data with pagination and combinational filters
+   * @param {number} clientId - Client ID
+   * @param {Object} options - Query options
+   * @returns {Object} Staff data with count
+   */
   static async fetchStaffData(clientId, options) {
     const queryOptions = StaffQueryBuilder.buildStaffQuery(clientId, options);
     
@@ -27,7 +39,7 @@ class StaffDataFetcher {
   }
 
   /**
-   * FIXED: Execute raw SQL query with proper JSON handling
+   * Execute raw SQL query for complex combinational filters
    * @param {Object} queryOptions - Raw query options
    * @returns {Object} Query results with count
    */
@@ -49,7 +61,7 @@ class StaffDataFetcher {
         nest: true
       });
 
-      // FIXED: Transform and parse JSON fields safely
+      // Transform and parse JSON fields safely
       const transformedRows = rows.map(row => {
         // Safe JSON parsing helper
         const safeJsonParse = (jsonString) => {
@@ -110,7 +122,11 @@ class StaffDataFetcher {
     }
   }
 
-  // ... rest of the methods remain the same
+  /**
+   * FIXED: Fetch related data in batches including project counts using raw SQL
+   * @param {Array} userIds - Array of user IDs
+   * @returns {Object} Related data maps including project counts
+   */
   static async fetchRelatedData(userIds) {
     if (userIds.length === 0) {
       return {
@@ -119,37 +135,44 @@ class StaffDataFetcher {
         salariesMap: {},
         tokensMap: {},
         accommodationsMap: {},
-        communicationDetailsMap: {}
+        communicationDetailsMap: {},
+        projectsMap: {}
       };
     }
 
     const batchQueries = StaffQueryBuilder.buildBatchQueries(userIds);
 
+    // Execute all batch queries concurrently
     const [
       userPhotos, 
       userJobProfiles, 
       userSalaries, 
       notificationTokens,
-      userCommunicationDetails
+      userCommunicationDetails,
+      userProjects
     ] = await Promise.all([
       batchQueries.userPhotos.model.findAll(batchQueries.userPhotos.options),
       batchQueries.userJobProfiles.model.findAll(batchQueries.userJobProfiles.options),
       batchQueries.userSalaries.model.findAll(batchQueries.userSalaries.options),
       batchQueries.notificationTokens.model.findAll(batchQueries.notificationTokens.options),
-      this.fetchUserCommunicationWithAccommodation(userIds)
+      this.fetchUserCommunicationWithAccommodation(userIds),
+      this.fetchUserProjectCounts(userIds) // FIXED: Use separate method
     ]);
 
+    // Create lookup maps including accommodation data
     const accommodationsMap = {};
     const communicationDetailsMap = {};
 
     userCommunicationDetails.forEach(commDetail => {
       const userId = commDetail.user_id;
       
+      // Map communication details
       if (!communicationDetailsMap[userId]) {
         communicationDetailsMap[userId] = [];
       }
       communicationDetailsMap[userId].push(commDetail);
 
+      // Map accommodation details
       if (commDetail.accommodation) {
         if (!accommodationsMap[userId]) {
           accommodationsMap[userId] = [];
@@ -164,10 +187,55 @@ class StaffDataFetcher {
       salariesMap: QueryHelpers.createLookupMap(userSalaries, 'user_id', false),
       tokensMap: QueryHelpers.createLookupMap(notificationTokens, 'user_id', true),
       accommodationsMap,
-      communicationDetailsMap
+      communicationDetailsMap,
+      projectsMap: QueryHelpers.createLookupMap(userProjects, 'user_id', false)
     };
   }
 
+  /**
+   * FIXED: Fetch user project counts using raw SQL to avoid model dependency issues
+   * @param {Array} userIds - Array of user IDs
+   * @returns {Array} Project count data
+   */
+  static async fetchUserProjectCounts(userIds) {
+    if (userIds.length === 0) return [];
+
+    const sequelize = Client.sequelize;
+    const placeholders = userIds.map(() => '?').join(',');
+    
+    try {
+      const query = `
+        SELECT 
+          user_id,
+          COUNT(project_id) as project_count
+        FROM user_projects 
+        WHERE user_id IN (${placeholders})
+        GROUP BY user_id
+      `;
+
+      const results = await sequelize.query(query, {
+        replacements: userIds,
+        type: sequelize.QueryTypes.SELECT
+      });
+
+      return results.map(result => ({
+        user_id: result.user_id,
+        project_count: parseInt(result.project_count) || 0,
+        get: function(field) {
+          return field === 'project_count' ? this.project_count : this[field];
+        }
+      }));
+    } catch (error) {
+      console.error('Error fetching user project counts:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Fetch user communication details with accommodation information
+   * @param {Array} userIds - Array of user IDs
+   * @returns {Array} Communication details with accommodation
+   */
   static async fetchUserCommunicationWithAccommodation(userIds) {
     const { UserCommunicationDetails, StaffAccommodation } = require('../../models');
     const { Op } = require('sequelize');
@@ -175,20 +243,42 @@ class StaffDataFetcher {
     return await UserCommunicationDetails.findAll({
       where: { user_id: { [Op.in]: userIds } },
       attributes: [
-        'user_id', 'communication_id', 'communication_address', 'country',
-        'permanent_address', 'pincode', 'state', 'phone_number',
-        'emergency_contact_name', 'emergency_contact_number',
-        'accommodation_id', 'bus_number'
+        'user_id',
+        'communication_id',
+        'communication_address',
+        'country',
+        'permanent_address',
+        'pincode',
+        'state',
+        'phone_number',
+        'emergency_contact_name',
+        'emergency_contact_number',
+        'accommodation_id',
+        'bus_number'
       ],
-      include: [{
-        model: StaffAccommodation,
-        as: 'accommodation',
-        attributes: ['accommodation_id', 'location', 'city', 'country', 'created_at'],
-        required: false
-      }]
+      include: [
+        {
+          model: StaffAccommodation,
+          as: 'accommodation',
+          attributes: [
+            'accommodation_id',
+            'location',
+            'city',
+            'country',
+            'created_at'
+          ],
+          required: false
+        }
+      ]
     });
   }
 
+  /**
+   * Fetch single staff member by ID
+   * @param {number} staffId - Staff ID
+   * @returns {Object} Staff data
+   * @throws {Error} If staff not found
+   */
   static async fetchStaffById(staffId) {
     const { User, Client, ClientRole } = require('../../models');
 

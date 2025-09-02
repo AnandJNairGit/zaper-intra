@@ -10,11 +10,14 @@ import {
   MapPin,
   Home,
   AlertTriangle,
-  Camera
+  Camera,
+  Briefcase,
+  Check,
+  X
 } from 'lucide-react';
 
 export const getStaffTableColumns = () => [
-  // NEW: Photo Column
+  // Photo Column
   {
     key: 'photo',
     title: 'Photo',
@@ -50,7 +53,7 @@ export const getStaffTableColumns = () => [
     )
   },
 
-  // NEW: Total Photos Column
+  // Total Photos Column
   {
     key: 'total_photos',
     title: 'Photos',
@@ -61,6 +64,43 @@ export const getStaffTableColumns = () => [
         <span className="text-sm font-medium">
           {item.photo_details?.total_photos || 0}
         </span>
+      </div>
+    )
+  },
+
+  // NEW: Number of Projects Column
+  {
+    key: 'number_of_projects',
+    title: 'Projects',
+    width: '100px',
+    render: (_, item) => (
+      <div className="flex items-center justify-center space-x-1">
+        <Briefcase className="w-4 h-4 text-gray-500" />
+        <span className="text-sm font-medium">
+          {item.number_of_projects || 0}
+        </span>
+      </div>
+    )
+  },
+
+  // NEW: Is Multi Project Column
+  {
+    key: 'is_multi_project',
+    title: 'Multi Project',
+    width: '120px',
+    render: (_, item) => (
+      <div className="flex items-center justify-center">
+        {(item.number_of_projects || 0) > 1 ? (
+          <div className="flex items-center text-green-600">
+            <Check className="w-4 h-4 mr-1" />
+            <span className="text-xs">Multi</span>
+          </div>
+        ) : (
+          <div className="flex items-center text-red-600">
+            <X className="w-4 h-4 mr-1" />
+            <span className="text-xs">Single</span>
+          </div>
+        )}
       </div>
     )
   },

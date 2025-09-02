@@ -374,7 +374,7 @@ class StaffQueryBuilder {
   }
 
   /**
-   * ENHANCED: Build batch queries for related data including photo_url
+   * FIXED: Build batch queries for related data including project counts (using raw SQL)
    * @param {Array} userIds - Array of user IDs
    * @returns {Object} Batch query options
    */
@@ -386,7 +386,6 @@ class StaffQueryBuilder {
         model: UserPhoto,
         options: {
           where: { user_id: { [Op.in]: userIds } },
-          // ENHANCED: Include photo_url in the attributes
           attributes: ['user_id', 'photo_id', 'photo_type', 'saved_to_vector', 'photo_url']
         }
       },
