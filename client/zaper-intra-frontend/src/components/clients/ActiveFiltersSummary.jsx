@@ -1,73 +1,62 @@
 // src/components/clients/ActiveFiltersSummary.jsx
 import React from 'react';
-import { X } from 'lucide-react';
+import { X, Filter } from 'lucide-react';
 
-const ActiveFiltersSummary = ({
-  hasActiveFilters,
-  selectedField,
-  debouncedSearchTerm,
-  searchType,
-  selectedCombinedFilter,
-  selectedOtFilter,
-  selectedFaceFilter,
-  minSalary,
-  maxSalary,
-  selectedCurrency,
-  handleClearAllFilters
-}) => {
+const ActiveFiltersSummary = ({ filters, hasActiveFilters, clearAllFilters }) => {
   if (!hasActiveFilters) return null;
 
+  const activeFilters = [];
+
+  if (filters.debouncedSearchTerm) {
+    activeFilters.push({ label: `"${filters.debouncedSearchTerm}"`, type: 'search' });
+  }
+  if (filters.selectedStatus) {
+    activeFilters.push({ label: filters.selectedStatus.label, type: 'status' });
+  }
+  if (filters.selectedField) {
+    activeFilters.push({ label: `Field: ${filters.selectedField.label}`, type: 'field' });
+  }
+  if (filters.selectedCombinedFilter) {
+    activeFilters.push({ label: filters.selectedCombinedFilter.label, type: 'filter' });
+  }
+  if (filters.selectedOtFilter) {
+    activeFilters.push({ label: `OT: ${filters.selectedOtFilter.label}`, type: 'ot' });
+  }
+  if (filters.selectedFaceFilter) {
+    activeFilters.push({ label: `Face: ${filters.selectedFaceFilter.label}`, type: 'face' });
+  }
+  if (filters.minSalary || filters.maxSalary) {
+    const range = `${filters.minSalary || '0'} - ${filters.maxSalary || '∞'}${filters.selectedCurrency ? ` ${filters.selectedCurrency}` : ''}`;
+    activeFilters.push({ label: `Salary: ${range}`, type: 'salary' });
+  }
+
   return (
-    <div className="mt-6 p-4 bg-indigo-50 rounded-lg">
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-sm font-medium text-indigo-900 mb-2">Active Filters:</p>
-          <div className="flex flex-wrap gap-2">
-            {selectedField && (
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                Field: {selectedField.label}
-              </span>
-            )}
-            {debouncedSearchTerm && (
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                Search: "{debouncedSearchTerm}"
-              </span>
-            )}
-            {searchType !== 'like' && (
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                Type: {searchType.replace('_', ' ')}
-              </span>
-            )}
-            {selectedCombinedFilter && (
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                Combined: {selectedCombinedFilter.label}
-              </span>
-            )}
-            {selectedOtFilter && (
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                OT: {selectedOtFilter.label}
-              </span>
-            )}
-            {selectedFaceFilter && (
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                Face: {selectedFaceFilter.label}
-              </span>
-            )}
-            {(minSalary || maxSalary) && (
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
-                Salary: {minSalary || '0'} - {maxSalary || '∞'}
-                {selectedCurrency && ` (${selectedCurrency})`}
-              </span>
-            )}
-          </div>
+    <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Filter className="h-4 w-4 text-blue-600" />
+          <span className="text-sm font-medium text-blue-900">
+            Filtering {activeFilters.length} criteria
+          </span>
         </div>
         <button
-          onClick={handleClearAllFilters}
-          className="flex items-center text-sm text-indigo-700 hover:text-indigo-900 transition-colors"
+          onClick={clearAllFilters}
+          className="flex items-center gap-1 px-3 py-1 text-sm text-blue-700 hover:text-blue-900 hover:bg-blue-100 rounded-md transition-colors"
         >
-          <X className="w-4 h-4 mr-1" />
+          <X className="h-3 w-3" />
           Clear
         </button>
+      </div>
+      
+      <div className="flex flex-wrap gap-2 mt-3">
+        {activeFilters.map((filter, index) => (
+          <span
+            key={index}
+            className="inline-flex items-center px-2.5 py-1 bg-white border border-blue-200 text-blue-800 text-xs font-medium rounded-md"
+          >
+            {filter.label}
+          </span>
+        ))}
       </div>
     </div>
   );
