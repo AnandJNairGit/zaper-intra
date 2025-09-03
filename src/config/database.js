@@ -39,6 +39,13 @@ const config = {
       timestamps: true,
       underscored: true,
       freezeTableName: true
+    },
+    // SSH tunnel configuration for production
+    ssh: {
+      host: process.env.SSH_HOST,
+      port: parseInt(process.env.SSH_PORT) || 22,
+      username: process.env.SSH_USERNAME,
+      privateKeyPath: process.env.SSH_PRIVATE_KEY_PATH
     }
   }
 };

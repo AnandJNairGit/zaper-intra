@@ -1,9 +1,9 @@
 // src/app.js
+
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
-
 const routes = require('./routes');
 const errorHandler = require('./middleware/errorHandler');
 const requestLogger = require('./middleware/requestLogger');
@@ -38,8 +38,8 @@ app.get('/', (req, res) => {
   });
 });
 
-// 404 handler
-app.use('*notFound', (req, res) => {
+// 404 handler - Express v5 compatible
+app.use('/*splat', (req, res) => {
   res.status(404).json({
     status: 'error',
     message: 'Route not found',
