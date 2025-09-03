@@ -1,7 +1,7 @@
 // src/components/clients/SearchAndFilters.jsx
 import React, { useState, useEffect } from 'react';
 import Select from 'react-select';
-import { Search, Filter, ChevronDown, ChevronUp, UserCheck, Clock, Eye, DollarSign, Smartphone, Briefcase, FolderOpen } from 'lucide-react';
+import { Search, Filter, ChevronDown, ChevronUp, UserCheck, Clock, Eye, DollarSign, Smartphone, Briefcase, FolderOpen, Users } from 'lucide-react';
 import { staffService } from '../../services/staffService';
 
 const SearchAndFilters = ({
@@ -92,6 +92,9 @@ const SearchAndFilters = ({
     { value: 'none', label: 'No Projects' }
   ];
 
+  // Dummy Report To options (to be implemented later)
+  const reportToOptions = [];
+
   const currencyOptions = [
     { value: '', label: 'Any Currency' },
     ...filterOptions.currencies.map(currency => ({
@@ -143,6 +146,7 @@ const SearchAndFilters = ({
                              filters.selectedDeviceFilter ||
                              filters.selectedProjectsFilter ||
                              filters.selectedProjectId ||
+                             filters.selectedReportTo ||
                              filters.minSalary || 
                              filters.maxSalary;
 
@@ -216,39 +220,6 @@ const SearchAndFilters = ({
           />
         </div>
 
-        {/* Project-Based Filter */}
-        <div className="min-w-[200px]">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            <FolderOpen className="inline w-4 h-4 mr-1" />
-            Project
-          </label>
-          <Select
-            value={projectOptions.find(option => option.value === filters.selectedProjectId)}
-            onChange={(value) => updateFilters({ selectedProjectId: value?.value || '' })}
-            options={projectOptions}
-            placeholder="All Projects"
-            isClearable
-            styles={selectStyles}
-            isLoading={projectsLoading}
-          />
-        </div>
-
-        {/* Projects Filter */}
-        <div className="min-w-[160px]">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            <Briefcase className="inline w-4 h-4 mr-1" />
-            Projects
-          </label>
-          <Select
-            value={projectsFilterOptions.find(option => option.value === filters.selectedProjectsFilter)}
-            onChange={(value) => updateFilters({ selectedProjectsFilter: value?.value || '' })}
-            options={projectsFilterOptions}
-            placeholder="All Projects"
-            isClearable
-            styles={selectStyles}
-          />
-        </div>
-
         {/* Advanced Filters Toggle */}
         <div className="flex items-end">
           <button
@@ -273,7 +244,7 @@ const SearchAndFilters = ({
       {showAdvanced && (
         <div className="mt-6 pt-6 border-t border-gray-200 space-y-4">
           {/* Filter Options Row */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {/* Combined Filter */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -338,6 +309,57 @@ const SearchAndFilters = ({
                 placeholder="All Devices"
                 isClearable
                 styles={selectStyles}
+              />
+            </div>
+
+            {/* Project-Based Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <FolderOpen className="inline w-4 h-4 mr-1" />
+                Project
+              </label>
+              <Select
+                value={projectOptions.find(option => option.value === filters.selectedProjectId)}
+                onChange={(value) => updateFilters({ selectedProjectId: value?.value || '' })}
+                options={projectOptions}
+                placeholder="All Projects"
+                isClearable
+                styles={selectStyles}
+                isLoading={projectsLoading}
+              />
+            </div>
+
+            {/* Projects Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <Briefcase className="inline w-4 h-4 mr-1" />
+                Projects Count
+              </label>
+              <Select
+                value={projectsFilterOptions.find(option => option.value === filters.selectedProjectsFilter)}
+                onChange={(value) => updateFilters({ selectedProjectsFilter: value?.value || '' })}
+                options={projectsFilterOptions}
+                placeholder="All Projects"
+                isClearable
+                styles={selectStyles}
+              />
+            </div>
+
+            {/* Report To Filter - Dummy */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <Users className="inline w-4 h-4 mr-1" />
+                Report To
+              </label>
+              <Select
+                value={filters.selectedReportTo ? { value: filters.selectedReportTo, label: filters.selectedReportTo } : null}
+                onChange={(value) => updateFilters({ selectedReportTo: value?.value || '' })}
+                options={reportToOptions}
+                placeholder="Select Report To"
+                isClearable
+                styles={selectStyles}
+                isDisabled={true}
+                noOptionsMessage={() => "Coming soon..."}
               />
             </div>
           </div>
