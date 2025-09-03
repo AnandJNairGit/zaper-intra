@@ -1,147 +1,172 @@
 // src/components/layout/Sidebar.jsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { 
-  Users, 
-  ChevronLeft, 
-  ChevronRight,
-  BarChart3,
-  Settings,
-  FileText,
-  Calendar
-} from 'lucide-react';
+import { Users, ChevronLeft, ChevronRight, BarChart3, Settings, FileText, Calendar, LogOut } from 'lucide-react';
 import { clsx } from 'clsx';
 
-const Sidebar = ({ isCollapsed, onToggle }) => {
+const Sidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  
+  // Initialize collapsed state from localStorage or default to true (collapsed)
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    const stored = localStorage.getItem('sidebar-collapsed');
+    return stored === null ? true : stored === 'true';
+  });
 
-  const menuItems = [
-    {
-      id: 'clients',
-      label: 'Clients',
-      icon: Users,
-      path: '/clients',
-      active: location.pathname === '/clients'
-    },
-    {
-      id: 'analytics',
-      label: 'Projects',
-      icon: BarChart3,
-      path: '/analytics',
-      active: location.pathname === '/analytics'
-    },
-    {
-      id: 'reports',
-      label: 'Reports',
-      icon: FileText,
-      path: '/reports',
-      active: location.pathname === '/reports'
-    },
-    // {
-    //   id: 'schedule',
-    //   label: 'Schedule',
-    //   icon: Calendar,
-    //   path: '/schedule',
-    //   active: location.pathname === '/schedule'
-    // },
-    // {
-    //   id: 'settings',
-    //   label: 'Settings',
-    //   icon: Settings,
-    //   path: '/settings',
-    //   active: location.pathname === '/settings'
-    // }
-  ];
+  // Save collapsed state to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('sidebar-collapsed', isCollapsed.toString());
+  }, [isCollapsed]);
+
+  const toggleSidebar = () => {
+    setIsCollapsed(prev => !prev);
+  };
+
+  const handleLogout = () => {
+    // Clear authentication token
+    localStorage.removeItem('app_auth');
+    // Clear sidebar state (optional)
+    localStorage.removeItem('sidebar-collapsed');
+    // Redirect to login page
+    window.location.href = '/login';
+  };
 
   const handleNavigation = (path) => {
     navigate(path);
   };
 
+  const menuItems = [
+    { 
+      id: 'clients', 
+      label: 'Clients', 
+      icon: Users, 
+      path: '/clients', 
+      active: location.pathname === '/clients' || location.pathname.startsWith('/clients/')
+    },
+    { 
+      id: 'analytics', 
+      label: 'Projects', 
+      icon: BarChart3, 
+      path: '/analytics', 
+      active: location.pathname === '/analytics' 
+    },
+    { 
+      id: 'reports', 
+      label: 'Reports', 
+      icon: FileText, 
+      path: '/reports', 
+      active: location.pathname === '/reports' 
+    },
+    // Uncomment these when you implement the pages
+    // { 
+    //   id: 'schedule', 
+    //   label: 'Schedule', 
+    //   icon: Calendar, 
+    //   path: '/schedule', 
+    //   active: location.pathname === '/schedule' 
+    // },
+    // { 
+    //   id: 'settings', 
+    //   label: 'Settings', 
+    //   icon: Settings, 
+    //   path: '/settings', 
+    //   active: location.pathname === '/settings' 
+    // }
+  ];
+
   return (
-    <div className={clsx(
-      "fixed left-0 top-0 h-full bg-white border-r border-gray-200 transition-all duration-300 ease-in-out z-40",
-      isCollapsed ? "w-16" : "w-64"
-    )}>
-      
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200">
+    <aside 
+      className={clsx(
+        "bg-gray-900 text-white h-full flex flex-col transition-all duration-300 ease-in-out",
+        isCollapsed ? "w-16" : "w-64"
+      )}
+    >
+      {/* Header with Logo and Toggle Button */}
+      <div className="flex items-center justify-between p-4 border-b border-gray-700">
         {!isCollapsed && (
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
-              <span className="text-sm font-bold text-white">Z</span>
-            </div>
-            <span className="text-xl font-bold text-gray-900">Zaper</span>
+          <div className="flex items-center">
+            <div className="text-lg font-bold text-white">Zaper Dashboard</div>
           </div>
         )}
-        
         <button
-          onClick={onToggle}
+          onClick={toggleSidebar}
           className={clsx(
-            "p-1.5 rounded-lg hover:bg-gray-100 transition-colors",
+            "p-1 rounded-md text-gray-400 hover:text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors",
             isCollapsed && "mx-auto"
           )}
+          aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           {isCollapsed ? (
-            <ChevronRight className="w-5 h-5 text-gray-600" />
+            <ChevronRight className="h-5 w-5" />
           ) : (
-            <ChevronLeft className="w-5 h-5 text-gray-600" />
+            <ChevronLeft className="h-5 w-5" />
           )}
         </button>
       </div>
 
       {/* Navigation Menu */}
-      <nav className="mt-8 px-2">
-        <div className="space-y-1">
-          {menuItems.map((item) => {
-            const IconComponent = item.icon;
-            
-            return (
-              <button
-                key={item.id}
-                onClick={() => handleNavigation(item.path)}
+      <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto">
+        {menuItems.map((item) => {
+          const Icon = item.icon;
+          return (
+            <button
+              key={item.id}
+              onClick={() => handleNavigation(item.path)}
+              className={clsx(
+                "group flex items-center w-full px-2 py-2 text-sm font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500",
+                item.active
+                  ? "bg-gray-800 text-white"
+                  : "text-gray-300 hover:bg-gray-700 hover:text-white",
+                isCollapsed ? "justify-center" : "justify-start"
+              )}
+              title={isCollapsed ? item.label : undefined}
+            >
+              <Icon 
                 className={clsx(
-                  "w-full flex items-center px-3 py-3 rounded-lg text-left transition-all duration-200",
-                  "hover:bg-gray-50 active:bg-gray-100 group",
-                  item.active 
-                    ? "bg-indigo-50 text-indigo-700 border-r-2 border-indigo-600" 
-                    : "text-gray-700 hover:text-gray-900",
-                  isCollapsed && "justify-center"
-                )}
-              >
-                <IconComponent className={clsx(
-                  "w-5 h-5 transition-colors",
-                  item.active ? "text-indigo-600" : "text-gray-500 group-hover:text-gray-700",
+                  "h-5 w-5 flex-shrink-0",
                   !isCollapsed && "mr-3"
-                )} />
-                
-                {!isCollapsed && (
-                  <span className="text-sm font-medium">{item.label}</span>
-                )}
-                
-                {/* Tooltip for collapsed state */}
-                {isCollapsed && (
-                  <div className="absolute left-16 px-2 py-1 ml-2 text-sm bg-gray-900 text-white rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-50">
-                    {item.label}
-                  </div>
-                )}
-              </button>
-            );
-          })}
-        </div>
+                )} 
+                aria-hidden="true" 
+              />
+              {!isCollapsed && (
+                <span className="truncate">{item.label}</span>
+              )}
+            </button>
+          );
+        })}
       </nav>
 
-      {/* Footer */}
+      {/* Version Info (when expanded) */}
       {!isCollapsed && (
-        <div className="absolute bottom-4 left-4 right-4">
-          <div className="bg-gray-50 rounded-lg p-3">
-            <p className="text-xs text-gray-600 text-center">
-              Zaper Dashboard v1.0.0
-            </p>
-          </div>
+        <div className="px-4 py-2 border-t border-gray-700">
+          <p className="text-xs text-gray-400 text-center">
+            Zaper Dashboard v1.0.0
+          </p>
         </div>
       )}
-    </div>
+
+      {/* Logout Button */}
+      <div className="border-t border-gray-700 p-4">
+        <button
+          onClick={handleLogout}
+          className={clsx(
+            "group flex items-center w-full px-2 py-2 text-sm font-medium rounded-md text-gray-300 hover:bg-red-600 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-red-500",
+            isCollapsed ? "justify-center" : "justify-start"
+          )}
+          title={isCollapsed ? "Logout" : undefined}
+        >
+          <LogOut 
+            className={clsx(
+              "h-5 w-5 flex-shrink-0",
+              !isCollapsed && "mr-3"
+            )} 
+            aria-hidden="true" 
+          />
+          {!isCollapsed && <span>Logout</span>}
+        </button>
+      </div>
+    </aside>
   );
 };
 

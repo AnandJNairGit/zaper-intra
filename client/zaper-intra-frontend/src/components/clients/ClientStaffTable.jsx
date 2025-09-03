@@ -238,6 +238,7 @@ const ClientStaffTable = ({ clientId, className = '' }) => {
         pagination={pagination}
         onPageChange={setCurrentPage}
         summary={summary}
+        showSearch={false}
       />
     </div>
   );
