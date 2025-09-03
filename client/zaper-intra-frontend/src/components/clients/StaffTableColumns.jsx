@@ -98,7 +98,7 @@ export const getStaffTableColumns = () => [
         ) : (
           <div className="flex items-center text-red-600">
             <X className="w-4 h-4 mr-1" />
-            <span className="text-xs">Single</span>
+            {/* <span className="text-xs"></span> */}
           </div>
         )}
       </div>

@@ -56,7 +56,7 @@ const STAFF_CONSTANTS = {
       ALL: 'all'
     },
 
-    // NEW: Project count filter options
+    // Project count filter options
     PROJECT_FILTERS: {
       SINGLE: 'single',
       MULTI: 'multi',
@@ -88,6 +88,12 @@ const STAFF_CONSTANTS = {
     },
     DEFAULT_CURRENCY: 'USD',
     SUPPORTED_CURRENCIES: ['USD', 'EUR', 'INR', 'GBP', 'CAD', 'AUD']
+  },
+  
+  // NEW: Project-based filter options
+  PROJECT_BASED_FILTERS: {
+    ENABLED: true,
+    VALIDATION_REQUIRED: true
   },
   
   DEFAULT_PAGINATION: {

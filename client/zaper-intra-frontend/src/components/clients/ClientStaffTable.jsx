@@ -24,6 +24,7 @@ const ClientStaffTable = ({ clientId, className = '' }) => {
     selectedFaceFilter: null,
     selectedDeviceFilter: null, // Added device filter
     selectedProjectsFilter: '', // Added projects filter
+    selectedProjectId: '', // Added project-based filter
     selectedStatus: null,
     // Salary
     selectedSalaryField: 'basic_salary',
@@ -92,6 +93,10 @@ const ClientStaffTable = ({ clientId, className = '' }) => {
       params.projectsFilter = filters.selectedProjectsFilter;
     }
 
+    if (filters.selectedProjectId) {
+      params.projectId = filters.selectedProjectId;
+    }
+
     if (filters.selectedStatus?.value) {
       params.status = filters.selectedStatus.value;
     }
@@ -126,6 +131,7 @@ const ClientStaffTable = ({ clientId, className = '' }) => {
       selectedFaceFilter: null,
       selectedDeviceFilter: null, // Reset device filter
       selectedProjectsFilter: '', // Reset projects filter
+      selectedProjectId: '', // Reset project-based filter
       selectedStatus: null,
       selectedSalaryField: 'basic_salary',
       minSalary: '',
@@ -146,6 +152,7 @@ const ClientStaffTable = ({ clientId, className = '' }) => {
            filters.selectedFaceFilter ||
            filters.selectedDeviceFilter || // Include device filter
            filters.selectedProjectsFilter || // Include projects filter
+           filters.selectedProjectId || // Include project-based filter
            filters.selectedStatus ||
            filters.minSalary ||
            filters.maxSalary ||
@@ -212,6 +219,7 @@ const ClientStaffTable = ({ clientId, className = '' }) => {
         filterOptions={filterOptions || { combinedFilters: [], otFilters: [], faceFilters: [], currencies: [] }}
         fieldsLoading={fieldsLoading}
         filtersLoading={filtersLoading}
+        clientId={clientId}
       />
 
       {/* Active Filters Summary */}

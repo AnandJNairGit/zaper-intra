@@ -42,6 +42,19 @@ export class StaffService {
   }
 
   /**
+   * Get project-based filter options for a specific client
+   */
+  async getProjectBasedFilterOptions(clientId) {
+    try {
+      const response = await httpClient.get(`/client/${clientId}/project-based-filter-options`);
+      return response;
+    } catch (error) {
+      console.error(`Error fetching project options for client ${clientId}:`, error);
+      throw new Error(`Failed to fetch project options: ${error.message}`);
+    }
+  }
+
+  /**
    * Get specific staff member by ID
    */
   async getStaffById(staffId) {

@@ -1,12 +1,13 @@
 // src/controllers/staffController.js
 const staffService = require('../services/staff/StaffService');
 const StaffValidator = require('../services/staff/StaffValidator');
+const ProjectService = require('../services/ProjectService');
 const { successResponse, errorResponse } = require('../utils/response');
 const logger = require('../utils/logger');
 
 class StaffController {
   /**
-   * ENHANCED: Get all staff members for a specific client with comprehensive filtering including project counts
+   * ENHANCED: Get all staff members for a specific client with comprehensive filtering including project-based filtering
    * GET /api/v1/staffs/client/:clientId
    */
   async getStaffByClient(req, res) {
@@ -17,6 +18,18 @@ class StaffController {
       // Basic validation
       if (!clientId || isNaN(clientId)) {
         return errorResponse(res, 'Invalid client ID. Must be a valid number.', 400);
+      }
+
+      // NEW: Validate project ID if provided
+      if (queryOptions.projectId) {
+        const projectBelongsToClient = await ProjectService.verifyProjectBelongsToClient(
+          parseInt(clientId), 
+          parseInt(queryOptions.projectId)
+        );
+        
+        if (!projectBelongsToClient) {
+          return errorResponse(res, 'Project does not belong to the specified client.', 400);
+        }
       }
 
       const result = await staffService.getStaffDetailsByClient(parseInt(clientId), queryOptions);
@@ -37,8 +50,10 @@ class StaffController {
         currency: queryOptions.currency || null,
         // Device filter logging
         deviceFilter: queryOptions.deviceFilter || 'all',
-        // NEW: Projects filter logging
-        projectsFilter: queryOptions.projectsFilter || 'all'
+        // Projects filter logging
+        projectsFilter: queryOptions.projectsFilter || 'all',
+        // NEW: Project-based filter logging
+        projectId: queryOptions.projectId || null
       });
       
       return successResponse(
@@ -158,7 +173,7 @@ class StaffController {
   }
 
   /**
-   * NEW: Get available project count filter options
+   * Get available project count filter options
    * GET /api/v1/staffs/project-filter-options
    */
   async getProjectFilterOptions(req, res) {
@@ -174,6 +189,45 @@ class StaffController {
     } catch (error) {
       logger.error('Error in getProjectFilterOptions:', error);
       return errorResponse(res, 'Failed to retrieve project filter options', 500);
+    }
+  }
+
+  /**
+   * NEW: Get project-based filter options for a specific client
+   * GET /api/v1/client/:clientId/project-based-filter-options
+   */
+  async getProjectBasedFilterOptions(req, res) {
+    try {
+      const { clientId } = req.params;
+
+      if (!clientId || isNaN(clientId)) {
+        return errorResponse(res, 'Invalid client ID. Must be a valid number.', 400);
+      }
+
+      const projects = await ProjectService.getProjectsForClient(parseInt(clientId));
+      
+      logger.info(`Retrieved ${projects.length} projects for client ${clientId} filter options`);
+      
+      return successResponse(
+        res,
+        'Project-based filter options retrieved successfully',
+        projects,
+        200
+      );
+
+    } catch (error) {
+      logger.error(`Error in getProjectBasedFilterOptions for client ${req.params.clientId}:`, error);
+
+      if (error.message.includes('Invalid client ID')) {
+        return errorResponse(res, 'Invalid client ID provided', 400);
+      }
+
+      return errorResponse(
+        res,
+        'Failed to retrieve project-based filter options',
+        500,
+        process.env.NODE_ENV === 'development' ? error.message : null
+      );
     }
   }
 

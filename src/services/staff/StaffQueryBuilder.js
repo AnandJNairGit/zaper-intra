@@ -11,7 +11,7 @@ const QueryHelpers = require('../../utils/queryHelpers');
 
 class StaffQueryBuilder {
   /**
-   * ENHANCED: Build main staff query options with project count filters
+   * ENHANCED: Build main staff query options with project-based filters
    * @param {number} clientId - Client ID
    * @param {Object} options - Query options
    * @returns {Object} Sequelize query options
@@ -20,7 +20,7 @@ class StaffQueryBuilder {
     const { 
       page, limit, search, searchField, searchType, status, orderBy, orderDirection,
       otFilter, faceFilter, combinedFilter, salaryField, minSalary, maxSalary, currency, 
-      deviceFilter, projectsFilter
+      deviceFilter, projectsFilter, projectId
     } = options;
     
     const offset = (page - 1) * limit;
@@ -33,8 +33,9 @@ class StaffQueryBuilder {
     const hasSalaryFilter = salaryField && (minSalary !== null || maxSalary !== null);
     const hasDeviceFilter = deviceFilter && deviceFilter !== 'all';
     const hasProjectsFilter = projectsFilter && projectsFilter !== 'all';
+    const hasProjectIdFilter = projectId !== null && projectId !== undefined;
 
-    if (filterConditions.requiresComplexQuery || hasSalaryFilter || hasDeviceFilter || hasProjectsFilter) {
+    if (filterConditions.requiresComplexQuery || hasSalaryFilter || hasDeviceFilter || hasProjectsFilter || hasProjectIdFilter) {
       return this.buildComplexStaffQuery(clientId, options, filterConditions);
     } else {
       return this.buildSimpleStaffQuery(clientId, options);
@@ -70,7 +71,7 @@ class StaffQueryBuilder {
   }
 
   /**
-   * ENHANCED: Build complex staff query with all filter types including project counts
+   * ENHANCED: Build complex staff query with all filter types including project-based filtering
    * @param {number} clientId - Client ID
    * @param {Object} options - Query options
    * @param {Object} filterConditions - Filter conditions
@@ -79,7 +80,7 @@ class StaffQueryBuilder {
   static buildComplexStaffQuery(clientId, options, filterConditions) {
     const { 
       page, limit, search, searchField, searchType, status, orderBy, orderDirection,
-      salaryField, minSalary, maxSalary, currency, deviceFilter, projectsFilter
+      salaryField, minSalary, maxSalary, currency, deviceFilter, projectsFilter, projectId
     } = options;
     const offset = (page - 1) * limit;
 
@@ -151,12 +152,21 @@ class StaffQueryBuilder {
       }
     }
 
-    // NEW: Build project count filter condition
+    // Build project count filter condition
     let projectsCondition = '';
     if (projectsFilter && projectsFilter !== 'all') {
       const projectsFilterSQL = QueryHelpers.buildProjectCountFilterCondition(projectsFilter);
       if (projectsFilterSQL) {
         projectsCondition = `AND (${projectsFilterSQL})`;
+      }
+    }
+
+    // NEW: Build project-based filter condition
+    let projectIdCondition = '';
+    if (projectId !== null && projectId !== undefined) {
+      const projectIdFilterSQL = QueryHelpers.buildProjectBasedFilterCondition(projectId);
+      if (projectIdFilterSQL) {
+        projectIdCondition = `AND (${projectIdFilterSQL})`;
       }
     }
 
@@ -256,6 +266,7 @@ class StaffQueryBuilder {
       ${salaryCondition}
       ${deviceCondition}
       ${projectsCondition}
+      ${projectIdCondition}
       
       ${orderClause}
       LIMIT :limit OFFSET :offset
@@ -278,6 +289,7 @@ class StaffQueryBuilder {
       ${salaryCondition}
       ${deviceCondition}
       ${projectsCondition}
+      ${projectIdCondition}
     `;
 
     // Prepare replacements

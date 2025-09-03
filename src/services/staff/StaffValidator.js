@@ -25,7 +25,18 @@ class StaffValidator {
   }
 
   /**
-   * ENHANCED: Validate and sanitize query options with project count filters
+   * NEW: Validate project ID
+   * @param {*} projectId - Project ID to validate
+   * @throws {Error} If project ID is invalid
+   */
+  static validateProjectId(projectId) {
+    if (projectId !== null && projectId !== undefined && (isNaN(projectId) || projectId <= 0)) {
+      throw new Error('Invalid project ID provided');
+    }
+  }
+
+  /**
+   * ENHANCED: Validate and sanitize query options with project-based filters
    * @param {Object} options - Query options
    * @returns {Object} Validated options
    */
@@ -50,8 +61,10 @@ class StaffValidator {
       currency = null,
       // Device filter parameter
       deviceFilter = 'all',
-      // NEW: Project count filter parameter
-      projectsFilter = 'all'
+      // Project count filter parameter
+      projectsFilter = 'all',
+      // NEW: Project-based filter parameter
+      projectId = null
     } = options;
 
     // Validate pagination
@@ -136,9 +149,18 @@ class StaffValidator {
     const validDeviceFilter = Object.values(STAFF_CONSTANTS.COMBINATIONAL_FILTERS.DEVICE_FILTERS)
       .includes(deviceFilter) ? deviceFilter : 'all';
 
-    // NEW: Validate projects filter parameter
+    // Validate projects filter parameter
     const validProjectsFilter = Object.values(STAFF_CONSTANTS.COMBINATIONAL_FILTERS.PROJECT_FILTERS)
       .includes(projectsFilter) ? projectsFilter : 'all';
+
+    // NEW: Validate project ID parameter
+    let validProjectId = null;
+    if (projectId !== null && projectId !== undefined) {
+      const parsedProjectId = parseInt(projectId);
+      if (!isNaN(parsedProjectId) && parsedProjectId > 0) {
+        validProjectId = parsedProjectId;
+      }
+    }
 
     return {
       page: validatedPage,
@@ -160,8 +182,10 @@ class StaffValidator {
       currency: validCurrency,
       // Device filter
       deviceFilter: validDeviceFilter,
-      // NEW: Projects filter
-      projectsFilter: validProjectsFilter
+      // Projects filter
+      projectsFilter: validProjectsFilter,
+      // NEW: Project-based filter
+      projectId: validProjectId
     };
   }
 
@@ -260,7 +284,7 @@ class StaffValidator {
   }
 
   /**
-   * NEW: Get available project count filter options
+   * Get available project count filter options
    * @returns {Object} Available project filter options
    */
   static getProjectFilterOptions() {

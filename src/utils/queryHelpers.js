@@ -179,7 +179,7 @@ class QueryHelpers {
   }
 
   /**
-   * NEW: Build project count filter condition
+   * Build project count filter condition
    * @param {string} projectsFilter - Projects filter: 'single', 'multi', 'none', 'all'
    * @returns {string|null} SQL condition for project count filtering
    */
@@ -195,6 +195,19 @@ class QueryHelpers {
       default:
         return null;
     }
+  }
+
+  /**
+   * NEW: Build project-based filter condition (filter users by specific project)
+   * @param {number} projectId - Project ID to filter by
+   * @returns {string|null} SQL condition for project-based filtering
+   */
+  static buildProjectBasedFilterCondition(projectId) {
+    if (!projectId || isNaN(projectId)) {
+      return null;
+    }
+    
+    return `EXISTS (SELECT 1 FROM user_projects up WHERE up.user_id = cu.user_id AND up.project_id = ${parseInt(projectId)})`;
   }
 
   /**

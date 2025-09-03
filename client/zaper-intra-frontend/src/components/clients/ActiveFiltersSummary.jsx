@@ -70,6 +70,13 @@ const ActiveFiltersSummary = ({ filters, hasActiveFilters, clearAllFilters }) =>
     });
   }
 
+  if (filters.selectedProjectId) {
+    activeFilters.push({
+      label: `Project: ${filters.selectedProjectId}`,
+      type: 'project'
+    });
+  }
+
   if (filters.minSalary || filters.maxSalary) {
     const range = `${filters.minSalary || '0'} - ${filters.maxSalary || '∞'}${filters.selectedCurrency ? ` ${filters.selectedCurrency}` : ''}`;
     activeFilters.push({

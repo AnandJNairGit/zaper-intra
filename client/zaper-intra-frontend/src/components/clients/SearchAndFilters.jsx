@@ -1,7 +1,8 @@
 // src/components/clients/SearchAndFilters.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Select from 'react-select';
-import { Search, Filter, ChevronDown, ChevronUp, UserCheck, Clock, Eye, DollarSign, Smartphone, Briefcase } from 'lucide-react';
+import { Search, Filter, ChevronDown, ChevronUp, UserCheck, Clock, Eye, DollarSign, Smartphone, Briefcase, FolderOpen } from 'lucide-react';
+import { staffService } from '../../services/staffService';
 
 const SearchAndFilters = ({
   filters,
@@ -11,9 +12,39 @@ const SearchAndFilters = ({
   searchTypes,
   filterOptions,
   fieldsLoading,
-  filtersLoading
+  filtersLoading,
+  clientId
 }) => {
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [projectOptions, setProjectOptions] = useState([]);
+  const [projectsLoading, setProjectsLoading] = useState(false);
+
+  // Fetch project options when component mounts
+  useEffect(() => {
+    const fetchProjectOptions = async () => {
+      if (!clientId) return;
+      
+      setProjectsLoading(true);
+      try {
+        const response = await staffService.getProjectBasedFilterOptions(clientId);
+        const options = [
+          { value: '', label: 'All Projects' },
+          ...response.data.map(project => ({
+            value: project.id,
+            label: project.name
+          }))
+        ];
+        setProjectOptions(options);
+      } catch (error) {
+        console.error('Error fetching project options:', error);
+        setProjectOptions([{ value: '', label: 'All Projects' }]);
+      } finally {
+        setProjectsLoading(false);
+      }
+    };
+
+    fetchProjectOptions();
+  }, [clientId]);
 
   // Prepare options
   const fieldOptions = [
@@ -111,6 +142,7 @@ const SearchAndFilters = ({
                              filters.selectedFaceFilter || 
                              filters.selectedDeviceFilter ||
                              filters.selectedProjectsFilter ||
+                             filters.selectedProjectId ||
                              filters.minSalary || 
                              filters.maxSalary;
 
@@ -181,6 +213,23 @@ const SearchAndFilters = ({
             placeholder="All Staff"
             isClearable
             styles={selectStyles}
+          />
+        </div>
+
+        {/* Project-Based Filter */}
+        <div className="min-w-[200px]">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            <FolderOpen className="inline w-4 h-4 mr-1" />
+            Project
+          </label>
+          <Select
+            value={projectOptions.find(option => option.value === filters.selectedProjectId)}
+            onChange={(value) => updateFilters({ selectedProjectId: value?.value || '' })}
+            options={projectOptions}
+            placeholder="All Projects"
+            isClearable
+            styles={selectStyles}
+            isLoading={projectsLoading}
           />
         </div>
 
